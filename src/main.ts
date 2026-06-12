@@ -1,112 +1,257 @@
-// 《西裝正義》入口 — Phase 1 placeholder：低多邊形台北街景轉場
-// 後續 phase 會替換為完整 game state machine（title/map/level/result/shop）
+// 《西裝正義》Taipei Suit Brawler — 遊戲入口與狀態機
+// title → map → level → result → shop → map …
 
-import * as THREE from 'three';
+import { Engine } from './core/engine';
+import { bus } from './core/events';
+import { initAudio, playSound } from './core/audio';
+import { MANIFEST } from './core/manifest';
+import { defaultSave, loadSave, writeSave } from './core/save';
+import { computePlayerStats } from './systems/stats';
+import { LevelRunner } from './levels/level';
+import { getLevelDef, getQuestsForLevel, SHOP_ITEMS, SKILLS } from './data';
+import { createHUD, createTitle, createLevelMap, createShopUI, createSkillTree, createResult } from './ui';
+import type { LevelId, SaveData, ShopItemDef } from './types';
 
-const app = document.getElementById('app')!;
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-app.appendChild(renderer.domElement);
+class Game {
+  private engine = new Engine(document.getElementById('app')!);
+  private hud = createHUD();
+  private title = createTitle();
+  private map = createLevelMap();
+  private shop = createShopUI();
+  private skillTree = createSkillTree();
+  private result = createResult();
 
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0d1117);
-scene.fog = new THREE.Fog(0x0d1117, 20, 60);
+  private save: SaveData;
+  private runner: LevelRunner | null = null;
+  private currentLevel: LevelId = 1;
 
-const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 200);
-camera.position.set(0, 6, 18);
+  constructor() {
+    this.save = loadSave() ?? defaultSave();
+    initAudio(MANIFEST.audio);
+    this.wireHud();
+    this.engine.start();
+    this.showTitle();
+  }
 
-// 燈光：夜色 + 霓虹
-scene.add(new THREE.AmbientLight(0x404060, 1.2));
-const moon = new THREE.DirectionalLight(0x8899ff, 0.8);
-moon.position.set(10, 20, 10);
-scene.add(moon);
+  // ───────── HUD 事件接線 ─────────
+  private wireHud(): void {
+    bus.on('player:damaged', ({ hp, maxHp }) => this.hud.setHP(hp, maxHp));
+    bus.on('player:healed', ({ hp, maxHp }) => this.hud.setHP(hp, maxHp));
+    bus.on('player:rage', ({ rage }) => this.hud.setRage(rage));
+    bus.on('player:combo', ({ count }) => this.hud.setCombo(count));
+    bus.on('enemy:died', ({ money }) => {
+      // 關卡內即時顯示累計（實際入帳在結算）
+      this.levelMoneyLive += money;
+      this.hud.setMoney(this.save.money + this.levelMoneyLive);
+    });
+  }
 
-// 地面
-const ground = new THREE.Mesh(
-  new THREE.PlaneGeometry(80, 80),
-  new THREE.MeshStandardMaterial({ color: 0x1a2030, roughness: 0.9 }),
-);
-ground.rotation.x = -Math.PI / 2;
-scene.add(ground);
+  private levelMoneyLive = 0;
 
-// 程式化街屋 + 霓虹招牌（placeholder）
-const city = new THREE.Group();
-const neonColors = [0x00d4ff, 0x7b2fff, 0xff6b35, 0xff2f7b];
-for (let i = 0; i < 40; i++) {
-  const w = 2 + Math.random() * 3;
-  const h = 3 + Math.random() * 12;
-  const d = 2 + Math.random() * 3;
-  const building = new THREE.Mesh(
-    new THREE.BoxGeometry(w, h, d),
-    new THREE.MeshStandardMaterial({ color: new THREE.Color().setHSL(0.6, 0.2, 0.1 + Math.random() * 0.15) }),
-  );
-  const angle = (i / 40) * Math.PI * 2;
-  const radius = 12 + Math.random() * 18;
-  building.position.set(Math.cos(angle) * radius, h / 2, Math.sin(angle) * radius);
-  city.add(building);
-
-  // 霓虹招牌
-  if (Math.random() > 0.4) {
-    const sign = new THREE.Mesh(
-      new THREE.BoxGeometry(0.3, 1 + Math.random() * 2, 0.8),
-      new THREE.MeshStandardMaterial({
-        color: 0x111111,
-        emissive: neonColors[i % neonColors.length],
-        emissiveIntensity: 2,
-      }),
+  // ───────── 場景：標題 ─────────
+  private showTitle(): void {
+    this.buildBackdrop();
+    bus.emit('state:changed', { state: 'title' });
+    const hasSave = loadSave() !== null;
+    this.title.show(
+      () => { this.save = defaultSave(); writeSave(this.save); this.title.hide(); this.showMap(); },
+      hasSave,
+      () => { this.title.hide(); this.showMap(); },
     );
-    sign.position.copy(building.position);
-    sign.position.y = h * 0.6;
-    sign.position.x += w / 2 + 0.3;
-    city.add(sign);
+  }
+
+  /** 標題/選關背景：旋轉台北夜景 */
+  private backdropOff: (() => void) | null = null;
+  private buildBackdrop(): void {
+    this.teardownLevel();
+    this.engine.clearScene();
+    // 重用 builder 的西門町主題當背景
+    void import('./levels/builder').then(({ buildEnvironment }) => {
+      const env = buildEnvironment(this.engine.scene, 'neon');
+      let t = 0;
+      this.backdropOff = this.engine.onUpdate((dt) => {
+        t += dt;
+        env.update(dt, t);
+        this.engine.camera.position.set(Math.sin(t * 0.1) * 22, 9, Math.cos(t * 0.1) * 22);
+        this.engine.camera.lookAt(0, 3, 0);
+      });
+    });
+  }
+
+  // ───────── 場景：選關地圖 ─────────
+  private showMap(): void {
+    bus.emit('state:changed', { state: 'map' });
+    this.hud.hide();
+    this.map.show({
+      unlockedLevel: this.save.unlockedLevel,
+      clearedRanks: this.save.clearedRanks,
+      onSelect: (id) => { this.map.hide(); this.startLevel(id); },
+      onShop: () => { this.map.hide(); this.showShop(() => this.showMap()); },
+    });
+  }
+
+  // ───────── 場景：關卡 ─────────
+  private startLevel(id: LevelId): void {
+    bus.emit('state:changed', { state: 'level' });
+    this.currentLevel = id;
+    this.levelMoneyLive = 0;
+    this.teardownLevel();
+    this.engine.clearScene();
+
+    const stats = computePlayerStats(this.save, SKILLS);
+    this.hud.setMoney(this.save.money);
+    this.hud.setBubbleTea(this.save.bubbleTeaCount);
+    this.hud.setHP(stats.maxHp, stats.maxHp);
+    this.hud.setRage(0);
+    this.hud.setCombo(0);
+
+    this.runner = new LevelRunner(
+      this.engine,
+      getLevelDef(id),
+      getQuestsForLevel(id),
+      stats,
+      {
+        tryDrinkTea: () => {
+          if (this.save.bubbleTeaCount <= 0) return null;
+          this.save.bubbleTeaCount -= 1;
+          writeSave(this.save);
+          this.hud.setBubbleTea(this.save.bubbleTeaCount);
+          return stats.maxHp; // 回滿
+        },
+      },
+      this.hud,
+      (outcome) => {
+        bus.emit('state:changed', { state: 'result' });
+        this.teardownLevel();
+        if (outcome.success) {
+          // 入帳
+          this.save.money += outcome.moneyEarned;
+          this.save.skillPoints += outcome.skillPointsEarned;
+          if (outcome.rank) {
+            const prev = this.save.clearedRanks[id];
+            const order = ['C', 'B', 'A', 'S'];
+            if (!prev || order.indexOf(outcome.rank) > order.indexOf(prev)) {
+              this.save.clearedRanks[id] = outcome.rank;
+            }
+          }
+          if (id < 5) this.save.unlockedLevel = Math.max(this.save.unlockedLevel, (id + 1) as LevelId) as LevelId;
+          writeSave(this.save);
+        }
+        this.buildBackdrop();
+        this.result.show({
+          success: outcome.success,
+          levelName: getLevelDef(id).name,
+          rank: outcome.rank,
+          moneyEarned: outcome.moneyEarned,
+          skillPointsEarned: outcome.skillPointsEarned,
+          onContinue: () => {
+            this.result.hide();
+            if (outcome.success) this.showShop(() => this.showMap());
+            else this.showMap();
+          },
+          onRetry: () => { this.result.hide(); this.startLevel(id); },
+          onMap: () => { this.result.hide(); this.showMap(); },
+        });
+      },
+    );
+  }
+
+  private teardownLevel(): void {
+    this.runner?.dispose();
+    this.runner = null;
+    if (this.backdropOff) { this.backdropOff(); this.backdropOff = null; }
+  }
+
+  // ───────── 場景：商店 + 技能樹 ─────────
+  private showShop(onDone: () => void): void {
+    bus.emit('state:changed', { state: 'shop' });
+    this.shop.show({
+      money: this.save.money,
+      save: this.save,
+      items: SHOP_ITEMS,
+      onBuy: (itemId) => {
+        const ok = this.tryBuy(SHOP_ITEMS.find((i) => i.id === itemId)!);
+        if (ok) {
+          playSound('buy');
+          this.shop.refresh(this.save.money, this.save);
+        }
+        return ok;
+      },
+      onClose: () => { this.shop.hide(); onDone(); },
+      onSkillTree: () => {
+        this.skillTree.show({
+          skillPoints: this.save.skillPoints,
+          skills: SKILLS,
+          levels: this.save.skillLevels,
+          onUpgrade: (skillId) => {
+            const ok = this.tryUpgrade(skillId);
+            if (ok) {
+              playSound('upgrade');
+              this.skillTree.refresh(this.save.skillPoints, this.save.skillLevels);
+            }
+            return ok;
+          },
+          onClose: () => {
+            this.skillTree.hide();
+            this.shop.refresh(this.save.money, this.save);
+          },
+        });
+      },
+    });
+  }
+
+  private tryBuy(item: ShopItemDef): boolean {
+    if (this.save.money < item.price) return false;
+    switch (item.effect) {
+      case 'healFull':
+        if (this.save.bubbleTeaCount >= 3) return false;
+        this.save.bubbleTeaCount += 1;
+        break;
+      case 'maxHpPermanent':
+        this.save.maxHpPermanentBonus += item.value;
+        break;
+      case 'damageReduction':
+        if (this.save.equipment.vest) return false;
+        this.save.equipment.vest = true;
+        break;
+      case 'moveSpeed':
+        if (this.save.equipment.shoes) return false;
+        this.save.equipment.shoes = true;
+        break;
+      case 'critChance':
+        if (this.save.equipment.tie) return false;
+        this.save.equipment.tie = true;
+        break;
+      case 'skillReset': {
+        const refund = Object.entries(this.save.skillLevels).reduce((sum, [id, lv]) => {
+          const def = SKILLS.find((s) => s.id === id);
+          if (!def) return sum;
+          let c = 0;
+          for (let i = 0; i < lv; i++) c += def.costPerLevel[i] ?? 0;
+          return sum + c;
+        }, 0);
+        this.save.skillLevels = {};
+        this.save.skillPoints += refund;
+        break;
+      }
+    }
+    this.save.money -= item.price;
+    writeSave(this.save);
+    return true;
+  }
+
+  private tryUpgrade(skillId: string): boolean {
+    const def = SKILLS.find((s) => s.id === skillId);
+    if (!def) return false;
+    const lv = this.save.skillLevels[skillId] ?? 0;
+    if (lv >= def.maxLevel) return false;
+    const cost = def.costPerLevel[lv] ?? Infinity;
+    if (this.save.skillPoints < cost) return false;
+    this.save.skillPoints -= cost;
+    this.save.skillLevels[skillId] = lv + 1;
+    writeSave(this.save);
+    return true;
   }
 }
-scene.add(city);
 
-// 台北 101 剪影（程式化八節斗型）
-const tower = new THREE.Group();
-const towerMat = new THREE.MeshStandardMaterial({
-  color: 0x16324a,
-  emissive: 0x00d4ff,
-  emissiveIntensity: 0.15,
-});
-const base = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 3, 8, 4), towerMat);
-base.position.y = 4;
-tower.add(base);
-for (let s = 0; s < 8; s++) {
-  const seg = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 1.8, 3.4, 4), towerMat);
-  seg.position.y = 8 + 3.4 * s + 1.7;
-  tower.add(seg);
-}
-const spire = new THREE.Mesh(new THREE.ConeGeometry(0.5, 6, 4), towerMat);
-spire.position.y = 8 + 3.4 * 8 + 3;
-tower.add(spire);
-tower.position.set(0, 0, -30);
-scene.add(tower);
-
-// 標題 overlay（之後由 ui/title.ts 取代）
-const ui = document.getElementById('ui-root')!;
-ui.innerHTML = `
-  <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;">
-    <h1 style="color:#00D4FF;font-size:56px;font-weight:900;margin:0;text-shadow:0 0 24px #00D4FF66;">西裝正義</h1>
-    <p style="color:#E6EDF3;font-size:18px;margin:0;">Taipei Suit Brawler — 開發中</p>
-    <p style="color:#7B2FFF;font-size:14px;margin:0;">雙拳主持正義・台北五大戰場</p>
-  </div>`;
-
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-});
-
-const clock = new THREE.Clock();
-function animate() {
-  requestAnimationFrame(animate);
-  const t = clock.getElapsedTime();
-  camera.position.x = Math.sin(t * 0.15) * 20;
-  camera.position.z = Math.cos(t * 0.15) * 20;
-  camera.lookAt(0, 6, -10);
-  renderer.render(scene, camera);
-}
-animate();
+new Game();

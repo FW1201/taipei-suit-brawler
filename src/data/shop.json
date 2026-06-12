@@ -1,0 +1,62 @@
+[
+  {
+    "id": "bubble_tea",
+    "name": "珍珠奶茶",
+    "description": "微糖去冰、Q 彈珍珠，一口回滿 HP。戰場上按 E 飲用（庫存上限 3 杯）。",
+    "price": 150,
+    "type": "consumable",
+    "effect": "healFull",
+    "value": 1,
+    "icon": "🧋"
+  },
+  {
+    "id": "luwei_platter",
+    "name": "滷味拼盤",
+    "description": "豆干、海帶、滷蛋全都來，吃下去最大 HP 永久 +10。",
+    "price": 500,
+    "type": "permanent",
+    "effect": "maxHpPermanent",
+    "value": 10,
+    "icon": "🍢"
+  },
+  {
+    "id": "bulletproof_vest",
+    "name": "防彈西裝背心",
+    "description": "量身訂製的內襯防護，受到的傷害減免 15%。",
+    "price": 1200,
+    "type": "equipment",
+    "effect": "damageReduction",
+    "value": 0.15,
+    "icon": "🦺"
+  },
+  {
+    "id": "italian_shoes",
+    "name": "義大利皮鞋",
+    "description": "手工縫線、踏地無聲，移動速度提升 10%。",
+    "price": 800,
+    "type": "equipment",
+    "effect": "moveSpeed",
+    "value": 0.1,
+    "icon": "👞"
+  },
+  {
+    "id": "lucky_tie",
+    "name": "幸運領帶",
+    "description": "繫上它今晚手氣特別順，暴擊率提升 10%。",
+    "price": 1000,
+    "type": "equipment",
+    "effect": "critChance",
+    "value": 0.1,
+    "icon": "👔"
+  },
+  {
+    "id": "skill_reset_ticket",
+    "name": "技能重置券",
+    "description": "重新做人專用券，退還所有已投入的技能點。",
+    "price": 300,
+    "type": "consumable",
+    "effect": "skillReset",
+    "value": 1,
+    "icon": "📜"
+  }
+]

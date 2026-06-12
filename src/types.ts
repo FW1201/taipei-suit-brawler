@@ -162,6 +162,7 @@ export interface PlayerStats {
   maxHp: number;
   lightDamage: number;
   heavyDamage: number;
+  heavyRadius: number;   // 重拳額外範圍（公尺）
   comboLength: number;
   moveSpeed: number;
   dodgeIFrames: number;

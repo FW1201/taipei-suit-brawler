@@ -1,0 +1,203 @@
+[
+  {
+    "id": "q1_main_clear_street",
+    "levelId": 1,
+    "main": true,
+    "type": "kill_count",
+    "title": "淨空徒步區",
+    "description": "西門町行人徒步區被混混佔據，擊倒 10 名鬧事混混，把街道還給逛街的人。",
+    "target": 10,
+    "rewardMoney": 300,
+    "rewardSkillPoints": 2
+  },
+  {
+    "id": "q1_main_boss_ximen",
+    "levelId": 1,
+    "main": true,
+    "type": "kill_boss",
+    "title": "教訓西門哥",
+    "description": "地頭蛇「西門哥」就在電影街口等你，讓他知道西裝不是穿好看的。",
+    "target": 1,
+    "rewardMoney": 600,
+    "rewardSkillPoints": 2
+  },
+  {
+    "id": "q1_side_rescue_students",
+    "levelId": 1,
+    "main": false,
+    "type": "timed",
+    "title": "放學危機",
+    "description": "幾名高中生被堵在巷口，90 秒內擊倒 4 名圍堵的混混完成救援。",
+    "target": 4,
+    "timeLimit": 90,
+    "rewardMoney": 300,
+    "rewardSkillPoints": 1
+  },
+  {
+    "id": "q2_main_three_alleys",
+    "levelId": 2,
+    "main": true,
+    "type": "kill_count",
+    "title": "殺出三條巷",
+    "description": "士林夜市的三條窄巷都被把守，擊倒 15 名擋路的打手，一路殺到底。",
+    "target": 15,
+    "rewardMoney": 450,
+    "rewardSkillPoints": 2
+  },
+  {
+    "id": "q2_main_boss_shilin",
+    "levelId": 2,
+    "main": true,
+    "type": "kill_boss",
+    "title": "刀疤土豪的帳",
+    "description": "收保護費的「刀疤土豪」躲在夜市深處，今晚連本帶利討回來。",
+    "target": 1,
+    "rewardMoney": 800,
+    "rewardSkillPoints": 2
+  },
+  {
+    "id": "q2_side_no_damage_alley",
+    "levelId": 2,
+    "main": false,
+    "type": "no_damage",
+    "title": "西裝不沾塵",
+    "description": "在第二條巷子裡一滴傷都不挨，乾乾淨淨地走出去。",
+    "target": 1,
+    "rewardMoney": 400,
+    "rewardSkillPoints": 1
+  },
+  {
+    "id": "q2_side_protect_cashbox",
+    "levelId": 2,
+    "main": false,
+    "type": "protect",
+    "title": "顧好錢箱",
+    "description": "蚵仔煎攤的錢箱被盯上了，別讓那群傢伙碰到它一根手指。",
+    "target": 1,
+    "rewardMoney": 350,
+    "rewardSkillPoints": 1
+  },
+  {
+    "id": "q3_main_survive_waves",
+    "levelId": 3,
+    "main": true,
+    "type": "survive",
+    "title": "守住夜襲三波",
+    "description": "龍山寺前廣場遭到夜襲，撐過整整 3 波圍攻，一步都不能退。",
+    "target": 3,
+    "rewardMoney": 500,
+    "rewardSkillPoints": 2
+  },
+  {
+    "id": "q3_main_boss_longshan",
+    "levelId": 3,
+    "main": true,
+    "type": "kill_boss",
+    "title": "放倒壯漢阿義",
+    "description": "「壯漢阿義」一拳能把香案打裂，用速度和技巧讓這座山倒下。",
+    "target": 1,
+    "rewardMoney": 1000,
+    "rewardSkillPoints": 2
+  },
+  {
+    "id": "q3_side_protect_censer",
+    "levelId": 3,
+    "main": false,
+    "type": "protect",
+    "title": "香火不滅",
+    "description": "百年香爐是廟裡的命脈，戰鬥再亂也不能讓它被砸毀。",
+    "target": 1,
+    "rewardMoney": 450,
+    "rewardSkillPoints": 1
+  },
+  {
+    "id": "q3_side_rescue_pilgrims",
+    "levelId": 3,
+    "main": false,
+    "type": "timed",
+    "title": "救出香客",
+    "description": "三名香客被困在迴廊，75 秒內擊倒挾持者完成救援。",
+    "target": 3,
+    "timeLimit": 75,
+    "rewardMoney": 400,
+    "rewardSkillPoints": 1
+  },
+  {
+    "id": "q4_main_break_line",
+    "levelId": 4,
+    "main": true,
+    "type": "kill_count",
+    "title": "突破封鎖線",
+    "description": "信義商圈的天橋與廣場佈滿黑衣保鑣，擊倒 12 名保鑣撕開封鎖線。",
+    "target": 12,
+    "rewardMoney": 700,
+    "rewardSkillPoints": 2
+  },
+  {
+    "id": "q4_main_boss_xinyi",
+    "levelId": 4,
+    "main": true,
+    "type": "kill_boss",
+    "title": "收傘吧，紳士",
+    "description": "「黑傘紳士」優雅地堵在天橋盡頭，把他的傘連同氣焰一起折斷。",
+    "target": 1,
+    "rewardMoney": 1200,
+    "rewardSkillPoints": 2
+  },
+  {
+    "id": "q4_side_bridge_rush",
+    "levelId": 4,
+    "main": false,
+    "type": "timed",
+    "title": "天橋限時衝刺",
+    "description": "在 60 秒內擊倒天橋上的 6 名守衛，趕在增援抵達前通過。",
+    "target": 6,
+    "timeLimit": 60,
+    "rewardMoney": 500,
+    "rewardSkillPoints": 1
+  },
+  {
+    "id": "q4_side_hunt_throwers",
+    "levelId": 4,
+    "main": false,
+    "type": "kill_count",
+    "title": "拆掉酒瓶火力",
+    "description": "高處的投擲手不斷丟下酒瓶，優先擊倒 3 名投擲手解除火力威脅。",
+    "target": 3,
+    "rewardMoney": 450,
+    "rewardSkillPoints": 1
+  },
+  {
+    "id": "q5_main_elevator_hold",
+    "levelId": 5,
+    "main": true,
+    "type": "survive",
+    "title": "電梯間死守",
+    "description": "直達頂樓的電梯間湧入精銳，守住 1 波猛攻，等電梯門再次打開。",
+    "target": 1,
+    "rewardMoney": 800,
+    "rewardSkillPoints": 2
+  },
+  {
+    "id": "q5_main_boss_chairman",
+    "levelId": 5,
+    "main": true,
+    "type": "kill_boss",
+    "title": "與主席談判",
+    "description": "101 頂樓的風很大，「主席」的西裝比你還貴——用拳頭完成最後的談判。",
+    "target": 1,
+    "rewardMoney": 1500,
+    "rewardSkillPoints": 2
+  },
+  {
+    "id": "q5_side_no_damage_outpost",
+    "levelId": 5,
+    "main": false,
+    "type": "no_damage",
+    "title": "完美的前哨戰",
+    "description": "在大廳前哨戰中不受任何傷害，讓主席在監視器裡看見你的從容。",
+    "target": 1,
+    "rewardMoney": 600,
+    "rewardSkillPoints": 1
+  }
+]

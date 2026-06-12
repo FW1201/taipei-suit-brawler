@@ -1,0 +1,92 @@
+[
+  {
+    "id": "fist_iron",
+    "branch": "fist",
+    "name": "鐵拳功",
+    "description": "拳頭如灌鉛般沉重，輕拳傷害每級提升 15%。",
+    "maxLevel": 3,
+    "costPerLevel": [1, 2, 3],
+    "effect": "lightDamageMult",
+    "valuePerLevel": 0.15
+  },
+  {
+    "id": "fist_combo",
+    "branch": "fist",
+    "name": "連環霸王拳",
+    "description": "西裝袖口翻飛，連擊段數每級 +1，組合技打好打滿。",
+    "maxLevel": 2,
+    "costPerLevel": [1, 2],
+    "effect": "comboLength",
+    "valuePerLevel": 1
+  },
+  {
+    "id": "fist_mountain",
+    "branch": "fist",
+    "name": "開山重錘",
+    "description": "重拳轟然落下，破防範圍每級擴大 0.5 公尺。",
+    "maxLevel": 3,
+    "costPerLevel": [1, 2, 3],
+    "effect": "heavyRadius",
+    "valuePerLevel": 0.5
+  },
+  {
+    "id": "agi_drunk_step",
+    "branch": "agility",
+    "name": "醉步閃身",
+    "description": "似醉非醉、身形飄忽，閃避無敵時間每級延長 0.1 秒。",
+    "maxLevel": 3,
+    "costPerLevel": [1, 2, 3],
+    "effect": "dodgeIFrames",
+    "valuePerLevel": 0.1
+  },
+  {
+    "id": "agi_gale",
+    "branch": "agility",
+    "name": "疾風行",
+    "description": "皮鞋踏地生風，移動速度每級提升 8%。",
+    "maxLevel": 3,
+    "costPerLevel": [1, 2, 3],
+    "effect": "moveSpeedMult",
+    "valuePerLevel": 0.08
+  },
+  {
+    "id": "agi_counter",
+    "branch": "agility",
+    "name": "借力打力",
+    "description": "閃過攻擊的瞬間順勢回擊，反擊傷害每級提升 25%。",
+    "maxLevel": 3,
+    "costPerLevel": [1, 2, 3],
+    "effect": "counterMult",
+    "valuePerLevel": 0.25
+  },
+  {
+    "id": "body_golden_bell",
+    "branch": "body",
+    "name": "金鐘罩",
+    "description": "筋骨如鐘、皮肉似罩，最大生命每級 +25。",
+    "maxLevel": 3,
+    "costPerLevel": [1, 2, 3],
+    "effect": "maxHpBonus",
+    "valuePerLevel": 25
+  },
+  {
+    "id": "body_rage_sutra",
+    "branch": "body",
+    "name": "怒火心法",
+    "description": "把不平之氣化為力量，怒氣累積速度每級提升 15%。",
+    "maxLevel": 3,
+    "costPerLevel": [1, 2, 3],
+    "effect": "rageGainMult",
+    "valuePerLevel": 0.15
+  },
+  {
+    "id": "body_phoenix_suit",
+    "branch": "body",
+    "name": "浴火西裝",
+    "description": "倒下也要帥著站起來，復活回復血量每級提升 15%。",
+    "maxLevel": 3,
+    "costPerLevel": [1, 2, 3],
+    "effect": "reviveHpMult",
+    "valuePerLevel": 0.15
+  }
+]

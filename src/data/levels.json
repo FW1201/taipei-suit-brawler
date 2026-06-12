@@ -1,0 +1,70 @@
+[
+  {
+    "id": 1,
+    "name": "西門町",
+    "subtitle": "行人徒步區的不速之客",
+    "description": "霓虹招牌下，一群混混把電影街當成自家客廳。整理袖扣，給他們上一堂禮儀課。",
+    "bossId": "boss_ximen",
+    "envTheme": "neon",
+    "waves": [
+      { "spawns": { "punk": 4 }, "trigger": 0 },
+      { "spawns": { "punk": 5 }, "trigger": "clear" },
+      { "spawns": { "punk": 6 }, "trigger": "clear" }
+    ]
+  },
+  {
+    "id": 2,
+    "name": "士林夜市",
+    "subtitle": "夜市燈火下的刀光",
+    "description": "蚵仔煎的香氣裡混著刀光，收保護費的集團盤踞三條窄巷。一路打到攤位深處的帳房。",
+    "bossId": "boss_shilin",
+    "envTheme": "nightmarket",
+    "waves": [
+      { "spawns": { "punk": 4, "knifer": 2 }, "trigger": 0 },
+      { "spawns": { "punk": 5, "knifer": 3 }, "trigger": 1 },
+      { "spawns": { "punk": 4, "knifer": 4 }, "trigger": 2 },
+      { "spawns": { "punk": 2, "knifer": 2 }, "trigger": "clear" }
+    ]
+  },
+  {
+    "id": 3,
+    "name": "龍山寺",
+    "subtitle": "香火中的暗影",
+    "description": "深夜的廟埕燈籠搖曳，一場有預謀的夜襲正要展開。守住香爐，撐過三波圍攻。",
+    "bossId": "boss_longshan",
+    "envTheme": "temple",
+    "waves": [
+      { "spawns": { "punk": 5, "knifer": 2 }, "trigger": 0 },
+      { "spawns": { "punk": 4, "bruiser": 1, "knifer": 2 }, "trigger": "clear" },
+      { "spawns": { "bruiser": 2, "knifer": 3, "berserker": 1 }, "trigger": "clear" }
+    ]
+  },
+  {
+    "id": 4,
+    "name": "信義商圈",
+    "subtitle": "天橋上的黑傘陣",
+    "description": "玻璃帷幕映著黑壓壓的西裝人牆，封鎖線從空橋一路拉到廣場。優雅地，撕開它。",
+    "bossId": "boss_xinyi",
+    "envTheme": "skybridge",
+    "waves": [
+      { "spawns": { "bodyguard": 3, "punk": 3 }, "trigger": 0 },
+      { "spawns": { "bodyguard": 2, "thrower": 2, "knifer": 2 }, "trigger": 1 },
+      { "spawns": { "bodyguard": 3, "thrower": 1, "bruiser": 1 }, "trigger": "clear" },
+      { "spawns": { "bodyguard": 4, "knifer": 3, "berserker": 1 }, "trigger": "clear" }
+    ]
+  },
+  {
+    "id": 5,
+    "name": "台北 101",
+    "subtitle": "直上頂樓的最終談判",
+    "description": "電梯按到最頂層，主席的精銳傾巢而出。今晚的台北夜景，由正義的一方欣賞。",
+    "bossId": "boss_101",
+    "envTheme": "rooftop",
+    "waves": [
+      { "spawns": { "bodyguard": 2, "knifer": 2, "bruiser": 1 }, "trigger": 0 },
+      { "spawns": { "punk": 3, "knifer": 2, "thrower": 2 }, "trigger": "clear" },
+      { "spawns": { "bodyguard": 2, "bruiser": 2, "berserker": 2 }, "trigger": "clear" },
+      { "spawns": { "berserker": 3, "knifer": 2, "thrower": 2, "bodyguard": 2 }, "trigger": "clear" }
+    ]
+  }
+]
