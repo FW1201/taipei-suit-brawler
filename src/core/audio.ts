@@ -40,8 +40,25 @@ const SYNTH_FALLBACK: Record<string, () => void> = {
   questDone: () => synthBeep(660, 200, 'sine', 0.06),
 };
 
+// 遊戲語意鍵 → manifest 實際檔案鍵（多個 = 隨機挑一個避免單調）
+const KEY_ALIASES: Record<string, string[]> = {
+  punchHit: ['punchHit1', 'punchHit2'],
+  footstep: ['footstep1', 'footstep2'],
+  punchSwing: ['punchWhiff'],
+  heavyHit: ['punchHeavy1', 'punchHeavy2'],
+  hurt: ['hitMetal'],
+  enemyDown: ['bodyFall'],
+  uiClick: ['uiClick'],
+  buy: ['uiBuy'],
+  upgrade: ['uiUpgrade'],
+  heal: ['uiBuy'],
+  questDone: ['uiUpgrade'],
+};
+
 export function playSound(key: string): void {
-  const url = manifest[key];
+  const aliases = KEY_ALIASES[key];
+  const resolved = aliases ? aliases[Math.floor(Math.random() * aliases.length)] : key;
+  const url = manifest[resolved] ?? manifest[key];
   if (url) {
     try {
       let el = cache.get(key);

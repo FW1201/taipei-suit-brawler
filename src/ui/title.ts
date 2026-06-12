@@ -57,7 +57,15 @@ export function createTitle(): TitleAPI {
       controlsTitle.style.cssText = 'font-size:12px;letter-spacing:0.4em;color:#00D4FF;margin-bottom:10px;font-weight:700;';
       controlsPanel.append(controlsTitle, controls);
 
-      wrap.append(logo, sub, tagline, btnRow, controlsPanel);
+      // 素材署名（CC-BY 要求）
+      const credits = el(
+        'div',
+        '',
+        '素材：Kenney.nl（CC0）・Quaternius（CC0）・"White Taipei 101" by Elaine Wijaya Oey（CC-BY 3.0）',
+      );
+      credits.style.cssText = 'font-size:10px;color:#5a6470;margin-top:14px;letter-spacing:0.05em;';
+
+      wrap.append(logo, sub, tagline, btnRow, controlsPanel, credits);
       screen.append(wrap);
       screen.style.display = 'flex';
     },

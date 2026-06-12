@@ -7,6 +7,7 @@ import { PlayerController, type PlayerDelegate } from '../combat/player';
 import { EnemyManager } from '../enemies/manager';
 import type { PlayerTarget } from '../enemies/enemy';
 import { QuestTracker } from '../systems/quest';
+import { CombatFX } from '../combat/fx';
 import { bus } from '../core/events';
 import type { HudAPI, LevelDef, LevelRank, PlayerStats, QuestDef } from '../types';
 import { getEnemyDef } from '../data';
@@ -24,6 +25,7 @@ export class LevelRunner {
   private enemies: EnemyManager;
   private tracker: QuestTracker;
   private followCam: FollowCamera;
+  private fx = new CombatFX();
   private waveIndex = -1;
   private bossSpawned = false;
   private bossDead = false;
@@ -57,7 +59,7 @@ export class LevelRunner {
     this.enemies = new EnemyManager(engine.scene, playerTarget);
     playerInstance = new PlayerController(stats, this.enemies, delegate, this.env.bounds);
     this.player = playerInstance;
-    this.player.resetForLevel(new THREE.Vector3(0, 0, this.env.bounds.maxZ - 2));
+    this.player.resetForLevel(new THREE.Vector3(0, 0, this.env.bounds.maxZ * 0.45));
     engine.scene.add(this.player.visual.root);
 
     this.wireEvents();
@@ -67,6 +69,12 @@ export class LevelRunner {
     hud.setQuests(this.tracker.hudList());
     hud.announce(`第 ${level.id} 關　${level.name}`, 2200);
     setTimeout(() => this.nextWave(), 1800);
+
+    // DEV 流程測試鉤子（production build 會被 tree-shake）
+    if (import.meta.env.DEV) {
+      (window as any).__win = () => { this.tracker.finalize(); this.bossSpawned = true; this.bossDead = true; this.succeed(); };
+      (window as any).__lose = () => this.fail();
+    }
   }
 
   private wireEvents(): void {
@@ -102,6 +110,10 @@ export class LevelRunner {
       bus.on('quest:failed', () => {
         this.hud.setQuests(this.tracker.hudList());
       }),
+      bus.on('fx:shake', ({ strength }) => this.followCam.shake(strength)),
+      bus.on('fx:damage', ({ x, y, z, amount, isCrit }) => {
+        this.fx.damageNumber(new THREE.Vector3(x, y, z), amount, isCrit, this.engine.camera);
+      }),
     );
   }
 
@@ -112,6 +124,7 @@ export class LevelRunner {
     this.enemies.update(dt);
     this.tracker.update(dt);
     this.followCam.update(this.player.position, dt);
+    this.fx.updateEnemyBars(this.enemies.all, this.engine.camera);
     this.hud.setQuests(this.tracker.hudList());
 
     // protect 目標：敵人靠近持續損血
@@ -214,6 +227,7 @@ export class LevelRunner {
     this.offUpdate();
     this.unsubs.forEach((u) => u());
     this.enemies.dispose();
+    this.fx.dispose();
     this.hud.hide();
     this.hud.hideBossBar();
   }

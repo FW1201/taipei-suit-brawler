@@ -194,6 +194,10 @@ export interface GameEvents {
   'level:completed': { levelId: LevelId; rank: LevelRank; moneyEarned: number; skillPointsEarned: number };
   'level:failed': { levelId: LevelId };
   'state:changed': { state: GameStateName };
+  /** 打擊特效：鏡頭震動 */
+  'fx:shake': { strength: number };
+  /** 打擊特效：浮動傷害數字（世界座標） */
+  'fx:damage': { x: number; y: number; z: number; amount: number; isCrit: boolean };
 }
 
 export type GameEventName = keyof GameEvents;

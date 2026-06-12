@@ -1,10 +1,12 @@
 import * as THREE from 'three';
-import { CharacterVisual } from './visual';
+import type { ICharacterVisual } from './visual';
+import { createCharacterVisual } from './visual-glb';
 import type { HitQuery } from './damage';
 import type { PlayerStats } from '../types';
 import { bus } from '../core/events';
 import { input } from '../core/input';
 import { playSound } from '../core/audio';
+import { timeCtl } from '../core/time';
 
 type PlayerState = 'free' | 'attack' | 'dodge' | 'hit' | 'downed' | 'rage' | 'dead';
 
@@ -23,7 +25,7 @@ const COMBO_QUEUE_WINDOW = 0.5;  // 收招後可接下一段的窗口
 export class PlayerController {
   readonly position = new THREE.Vector3();
   facing = 0; // 弧度，0 = +z
-  readonly visual: CharacterVisual;
+  readonly visual: ICharacterVisual;
 
   hp: number;
   rage = 0;          // 0-100
@@ -49,11 +51,13 @@ export class PlayerController {
     private bounds: { minX: number; maxX: number; minZ: number; maxZ: number },
   ) {
     this.hp = stats.maxHp;
-    this.visual = new CharacterVisual({
+    this.visual = createCharacterVisual({
       suitColor: 0x1c2a4a,      // 深藍西裝
       shirtColor: 0xf5f5f5,
       tieColor: 0xff6b35,       // 橘領帶（Neon Circuit accent）
       sunglasses: true,
+      isHero: true,
+      onFootstep: () => { if (this.state === 'free') playSound('footstep'); },
     });
   }
 
@@ -231,6 +235,8 @@ export class PlayerController {
 
     if (hitAny) {
       playSound(isHeavy ? 'heavyHit' : 'punchHit');
+      timeCtl.hitstop(isHeavy || isFinisher ? 0.09 : 0.04); // 命中頓幀
+      if (isHeavy || isFinisher) bus.emit('fx:shake', { strength: 0.28 });
       this.comboHits += 1;
       this.comboResetTimer = 2.2;
       bus.emit('player:combo', { count: this.comboHits });
@@ -265,6 +271,8 @@ export class PlayerController {
     this.visual.setRageGlow(true);
     setTimeout(() => this.visual.setRageGlow(false), 700);
     playSound('rage');
+    timeCtl.hitstop(0.14);
+    bus.emit('fx:shake', { strength: 0.5 });
 
     // 「正義制裁」AOE：半徑 4.5m 全體大傷害 + 擊倒
     const targets = this.hitQuery.queryRadius(this.position, 4.5);
@@ -324,6 +332,7 @@ export class PlayerController {
     this.gainRage(4 * this.stats.rageGainMult);
     this.visual.flashTint(0xff0000);
     playSound('hurt');
+    bus.emit('fx:shake', { strength: 0.32 });
 
     // 擊退
     const kb = this.position.clone().sub(fromPos);

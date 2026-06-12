@@ -12,6 +12,7 @@
     "isolatedModules": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
+    "types": ["vite/client"],
     "useDefineForClassFields": true,
     "noEmit": true
   },

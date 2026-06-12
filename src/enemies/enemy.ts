@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { CharacterVisual } from '../combat/visual';
+import type { ICharacterVisual } from '../combat/visual';
+import { createCharacterVisual } from '../combat/visual-glb';
 import type { Hittable, HitOptions } from '../combat/damage';
 import { inArc } from '../combat/damage';
 import type { EnemyDef } from '../types';
@@ -29,7 +30,7 @@ const KNOCKED_TIME = 1.4;
 
 export class Enemy implements Hittable {
   readonly position = new THREE.Vector3();
-  readonly visual: CharacterVisual;
+  readonly visual: ICharacterVisual;
   readonly def: EnemyDef;
 
   hp: number;
@@ -55,7 +56,7 @@ export class Enemy implements Hittable {
     this.def = def;
     this.hp = this.maxHp = def.hp;
     this.position.copy(spawnPos);
-    this.visual = new CharacterVisual({
+    this.visual = createCharacterVisual({
       suitColor: parseInt(def.tint.replace('#', ''), 16),
       shirtColor: def.kind === 'bodyguard' ? 0x222222 : 0xcccccc,
       sunglasses: def.kind === 'bodyguard' || def.kind === 'boss',
@@ -244,6 +245,13 @@ export class Enemy implements Hittable {
     this.hp -= Math.round(damage);
     this.visual.flashTint(opts.isCrit ? 0xffdd00 : 0xffffff);
     bus.emit('enemy:damaged', { defId: this.def.id, hp: Math.max(0, this.hp), maxHp: this.maxHp });
+    bus.emit('fx:damage', {
+      x: this.position.x,
+      y: 1.9 * this.def.scale,
+      z: this.position.z,
+      amount: damage,
+      isCrit: !!opts.isCrit,
+    });
 
     // 擊退
     const kb = this.position.clone().sub(opts.fromPos);

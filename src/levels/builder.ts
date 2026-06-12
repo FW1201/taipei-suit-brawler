@@ -70,6 +70,26 @@ function lanternString(length: number, count: number): THREE.Group {
   return g;
 }
 
+/** 台北 101：先放程式化版本，GLB（CC-BY, Elaine Wijaya Oey）載到後原地替換 */
+function placeTaipei101(scene: THREE.Scene, pos: THREE.Vector3, targetHeight: number): void {
+  const procedural = taipei101(targetHeight / 40);
+  procedural.position.copy(pos);
+  scene.add(procedural);
+  const url = MANIFEST.landmarks.taipei101;
+  if (!url) return;
+  void loadGLB(url).then((gltf) => {
+    if (!gltf) return;
+    const model = cloneScene(gltf);
+    const bbox = new THREE.Box3().setFromObject(model);
+    const h = Math.max(0.001, bbox.max.y - bbox.min.y);
+    model.scale.setScalar(targetHeight / h);
+    model.position.copy(pos);
+    model.position.y = pos.y - bbox.min.y * (targetHeight / h);
+    scene.remove(procedural);
+    scene.add(model);
+  });
+}
+
 /** 程式化台北 101 */
 export function taipei101(scale = 1): THREE.Group {
   const g = new THREE.Group();
@@ -172,8 +192,14 @@ function baseSetup(scene: THREE.Scene, w: number, d: number, groundColor: number
   ground.receiveShadow = true;
   scene.add(ground);
 
-  scene.add(new THREE.AmbientLight(0x556077, 1.1));
-  const key = new THREE.DirectionalLight(0xaabbff, 1.0);
+  scene.add(new THREE.AmbientLight(0x66708a, 1.45));
+  const hemi = new THREE.HemisphereLight(0x33415e, 0x1a1410, 0.7);
+  scene.add(hemi);
+  // 戰鬥區中央柔光，確保角色清晰可讀
+  const center = new THREE.PointLight(0xbfd4ff, 30, Math.max(w, d) * 2.2, 1.6);
+  center.position.set(0, 9, 0);
+  scene.add(center);
+  const key = new THREE.DirectionalLight(0xaabbff, 1.25);
   key.position.set(8, 18, 6);
   key.castShadow = true;
   key.shadow.mapSize.set(1024, 1024);
@@ -182,11 +208,25 @@ function baseSetup(scene: THREE.Scene, w: number, d: number, groundColor: number
   scene.add(key);
 }
 
-/** 嘗試用 Kenney GLB 增強場景（非同步，載到就放） */
+/** 放置單件 Kenney GLB（非同步 fire-and-forget，載入失敗就靜默跳過） */
+function placeGLB(scene: THREE.Scene, key: string, x: number, z: number, ry = 0, scale = 1): void {
+  const url = MANIFEST.city[key];
+  if (!url) return;
+  void loadGLB(url).then((gltf) => {
+    if (!gltf) return;
+    const inst = cloneScene(gltf);
+    inst.scale.setScalar(scale);
+    inst.position.set(x, 0, z);
+    inst.rotation.y = ry;
+    scene.add(inst);
+  });
+}
+
+/** 散布 Kenney 建築（非同步，載到就放） */
 async function scatterCityGLBs(scene: THREE.Scene, positions: [number, number, number][]): Promise<void> {
   const keys = Object.keys(MANIFEST.city).filter((k) => k.toLowerCase().includes('building'));
   if (keys.length === 0) return;
-  const gltfs = await Promise.all(keys.slice(0, 6).map((k) => loadGLB(MANIFEST.city[k])));
+  const gltfs = await Promise.all(keys.slice(0, 8).map((k) => loadGLB(MANIFEST.city[k])));
   const valid = gltfs.filter((g): g is NonNullable<typeof g> => !!g);
   if (valid.length === 0) return;
   positions.forEach(([x, ry, z], i) => {
@@ -197,6 +237,19 @@ async function scatterCityGLBs(scene: THREE.Scene, positions: [number, number, n
     inst.rotation.y = ry;
     scene.add(inst);
   });
+}
+
+/** 路燈一排（Kenney streetLight + 自帶光暈球） */
+function streetLights(scene: THREE.Scene, spots: [number, number, number][]): void {
+  for (const [x, z, ry] of spots) {
+    placeGLB(scene, 'streetLight', x, z, ry, 3);
+    const glow = new THREE.Mesh(
+      new THREE.SphereGeometry(0.16, 8, 8),
+      new THREE.MeshStandardMaterial({ color: 0xffe9a0, emissive: 0xffd870, emissiveIntensity: 2.4 }),
+    );
+    glow.position.set(x, 3.2, z);
+    scene.add(glow);
+  }
 }
 
 export function buildEnvironment(scene: THREE.Scene, theme: Theme): Environment {
@@ -232,6 +285,11 @@ export function buildEnvironment(scene: THREE.Scene, theme: Theme): Environment 
       grid.position.y = 0.01;
       scene.add(grid);
       void scatterCityGLBs(scene, [[-26, 0.4, 8], [26, -0.4, -6], [-24, 1.2, -14], [25, 2.2, 12]]);
+      // 路燈圍繞廣場四角 + 施工區小景
+      streetLights(scene, [[-14, -10, 0.8], [14, -10, -0.8], [-14, 10, 2.4], [14, 10, -2.4]]);
+      placeGLB(scene, 'constructionCone', -8, 6, 0, 2.2);
+      placeGLB(scene, 'constructionCone', -7.2, 6.8, 0.5, 2.2);
+      placeGLB(scene, 'constructionBarrier', -9, 7.5, 0.3, 2.6);
       break;
     }
 
@@ -258,6 +316,17 @@ export function buildEnvironment(scene: THREE.Scene, theme: Theme): Environment 
           scene.add(ls);
         }
       }
+      // 夜市雜物（陽傘縮小放攤位間隙）
+      placeGLB(scene, 'parasolA', -14.8, 8.8, 0.4, 1.2);
+      placeGLB(scene, 'parasolB', 11.2, -8.8, 2.1, 1.2);
+      placeGLB(scene, 'constructionCone', -26, -4.8, 0, 1.6);
+      placeGLB(scene, 'constructionCone', 26, 4.8, 0, 1.6);
+      // 巷內暖色補光
+      for (const lx of [-18, 0, 18]) {
+        const warm = new THREE.PointLight(0xffbb66, 18, 22, 1.8);
+        warm.position.set(lx, 4.5, 0);
+        scene.add(warm);
+      }
       break;
     }
 
@@ -283,6 +352,7 @@ export function buildEnvironment(scene: THREE.Scene, theme: Theme): Environment 
         ls.position.set(-12 + i * 5, 3.4, -14.5);
         scene.add(ls);
       }
+      streetLights(scene, [[-13, 12, 2.4], [13, 12, -2.4]]);
       // 香爐煙（粒子感：上升小方塊）
       const smokeM = new THREE.MeshBasicMaterial({ color: 0x99aabb, transparent: true, opacity: 0.25 });
       const puffs: THREE.Mesh[] = [];
@@ -315,7 +385,7 @@ export function buildEnvironment(scene: THREE.Scene, theme: Theme): Environment 
       for (let i = 0; i < 16; i++) {
         const h = 14 + Math.random() * 22;
         const tower = box(6 + Math.random() * 4, h, 6 + Math.random() * 4,
-          mat(0x16202e, { metalness: 0.7, roughness: 0.25, emissive: 0x0a2a3a, emissiveIntensity: 0.5 }));
+          mat(0x223349, { metalness: 0.6, roughness: 0.3, emissive: 0x14405c, emissiveIntensity: 0.85 }));
         const x = -36 + Math.random() * 72;
         const z = (10 + Math.random() * 16) * (i % 2 === 0 ? 1 : -1);
         tower.position.set(x, h / 2 - 9, z); // 樓體下沉營造高架感
@@ -323,16 +393,17 @@ export function buildEnvironment(scene: THREE.Scene, theme: Theme): Environment 
         // 窗格光點
         const lights = new THREE.Mesh(
           new THREE.PlaneGeometry(4, h * 0.8),
-          new THREE.MeshBasicMaterial({ color: 0xffe9a0, transparent: true, opacity: 0.12 }),
+          new THREE.MeshBasicMaterial({ color: 0xffe9a0, transparent: true, opacity: 0.28 }),
         );
         lights.position.set(x, h / 2 - 9, z - (z > 0 ? 3.5 : -3.5));
         if (z < 0) lights.rotation.y = Math.PI;
         scene.add(lights);
       }
       // 101 遠景
-      const tower101 = taipei101(1.4);
-      tower101.position.set(38, -9, -20);
-      scene.add(tower101);
+      placeTaipei101(scene, new THREE.Vector3(38, -9, -20), 60);
+      // 橋上路燈與告示
+      streetLights(scene, [[-22, -4.6, 0], [0, 4.6, Math.PI], [22, -4.6, 0]]);
+      placeGLB(scene, 'signHighway', -30, -4.2, 0.4, 2.5);
       break;
     }
 
@@ -351,10 +422,8 @@ export function buildEnvironment(scene: THREE.Scene, theme: Theme): Environment 
         scene.add(m);
       };
       hBar(1, 6, -2, 0); hBar(1, 6, 2, 0); hBar(3, 1, 0, 0);
-      // 塔尖在旁
-      const spireSeg = taipei101(0.9);
-      spireSeg.position.set(-22, -26, -18);
-      scene.add(spireSeg);
+      // 塔身在旁（頂樓平台視角）
+      placeTaipei101(scene, new THREE.Vector3(-26, -40, -22), 48);
       // 樓下城市光海
       const cityGlow = new THREE.Mesh(
         new THREE.PlaneGeometry(300, 300),
@@ -371,6 +440,9 @@ export function buildEnvironment(scene: THREE.Scene, theme: Theme): Environment 
         dot.position.set((Math.random() - 0.5) * 200, -29, (Math.random() - 0.5) * 200);
         scene.add(dot);
       }
+      // 頂樓設備與護欄
+      placeGLB(scene, 'constructionBarrier', -11, -8, 1.57, 2.4);
+      placeGLB(scene, 'constructionBarrier', 11, 8, 1.57, 2.4);
       // 強風感：旗幟/天線搖晃
       const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.08, 4, 6), mat(0xaa2222));
       antenna.position.set(11, 2, -11);

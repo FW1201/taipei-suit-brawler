@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { input } from './input';
+import { timeCtl } from './time';
 
 export type UpdateFn = (dt: number, elapsed: number) => void;
 
@@ -45,7 +46,7 @@ export class Engine {
     const loop = () => {
       if (!this.running) return;
       requestAnimationFrame(loop);
-      const dt = Math.min(this.clock.getDelta(), 0.05); // 鎖死最大步長避免跳幀穿模
+      const dt = timeCtl.scale(Math.min(this.clock.getDelta(), 0.05)); // 鎖死最大步長 + hitstop
       const elapsed = this.clock.getElapsedTime();
       this.updates.forEach((fn) => fn(dt, elapsed));
       input.endFrame();

@@ -28,6 +28,7 @@ class Game {
   constructor() {
     this.save = loadSave() ?? defaultSave();
     initAudio(MANIFEST.audio);
+    // 角色採程式化西裝人（主題正確且零載入）；GLB 角色管線保留於 visual-glb.ts
     this.wireHud();
     this.engine.start();
     this.showTitle();
