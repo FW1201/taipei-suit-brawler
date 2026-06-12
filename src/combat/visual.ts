@@ -36,8 +36,16 @@ export interface ICharacterVisual {
 }
 
 const hex = (n: number) => `#${n.toString(16).padStart(6, '0')}`;
-const OUTLINE = '#15120f';
-const LINE_W = 0.05; // 描邊粗細（公尺），Dad'n Me 的粗線條
+const OUTLINE = '#181410';
+const LINE_W = 0.055; // 描邊粗細（公尺），The Behemoth 式粗墨線
+
+/** 顏色加深（cel shading 第二色調用） */
+function darken(n: number, f: number): string {
+  const r = Math.floor(((n >> 16) & 0xff) * f);
+  const g = Math.floor(((n >> 8) & 0xff) * f);
+  const b = Math.floor((n & 0xff) * f);
+  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
+}
 
 /** 攻擊曲線：預備後拉 → 爆發伸出 → 停格 → 收招；peak 對齊 player.ts 命中幀 */
 function strike(u: number, anticip: number, peakAt: number): number {
@@ -317,10 +325,13 @@ export class CharacterVisual implements ICharacterVisual {
     const shoulderY = 1.06 * crouchK;
     const headR = 0.4;
 
-    const limb = (x1: number, y1: number, x2: number, y2: number, w: number, c: string) => {
+    // 曲線肢體：帶微彎（手肘/膝蓋的有機感），雙層描邊
+    const limb = (x1: number, y1: number, x2: number, y2: number, w: number, c: string, bend = 0.1) => {
+      const mx = (x1 + x2) / 2 - (y2 - y1) * bend;
+      const my = (y1 + y2) / 2 + (x2 - x1) * bend;
       ctx.beginPath();
       ctx.moveTo(x1, y1);
-      ctx.lineTo(x2, y2);
+      ctx.quadraticCurveTo(mx, my, x2, y2);
       ctx.lineWidth = w + LINE_W * 2;
       ctx.strokeStyle = OUTLINE;
       ctx.stroke();
@@ -336,6 +347,16 @@ export class CharacterVisual implements ICharacterVisual {
       ctx.fillStyle = skin;
       ctx.fill();
       ctx.stroke();
+      // 拳面 cel 陰影（下半月牙）
+      if (!tinted) {
+        ctx.save();
+        ctx.clip();
+        ctx.fillStyle = 'rgba(60,30,20,0.22)';
+        ctx.beginPath();
+        ctx.ellipse(x, y - r * 0.45, r * 1.05, r * 0.72, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
     };
 
     // 後手臂 + 拳（最底層）
@@ -368,8 +389,16 @@ export class CharacterVisual implements ICharacterVisual {
     ctx.closePath();
     ctx.fillStyle = suit;
     ctx.fill();
+    // 西裝背側 cel 陰影（後緣縱帶）
+    if (!tinted) {
+      ctx.save();
+      ctx.clip();
+      ctx.fillStyle = 'rgba(8,6,14,0.3)';
+      ctx.fillRect(-0.34, -0.05, 0.17, tH + 0.1);
+      ctx.restore();
+    }
     ctx.stroke();
-    // 襯衫 V 領 + 領帶
+    // 襯衫 V 領 + 領帶（隨動作微飄）
     ctx.beginPath();
     ctx.moveTo(-0.09, tH);
     ctx.lineTo(0.09, tH);
@@ -379,12 +408,13 @@ export class CharacterVisual implements ICharacterVisual {
     ctx.fill();
     ctx.stroke();
     if (o.tieColor !== undefined) {
+      const flap = Math.sin(this.now * 9) * 0.02 + P.lean * 0.07;
       ctx.beginPath();
       ctx.moveTo(-0.035, tH - 0.02);
       ctx.lineTo(0.035, tH - 0.02);
-      ctx.lineTo(0.05, tH - 0.3);
-      ctx.lineTo(0, tH - 0.38);
-      ctx.lineTo(-0.05, tH - 0.3);
+      ctx.quadraticCurveTo(0.05 + flap, tH - 0.18, 0.05 + flap * 2, tH - 0.3);
+      ctx.lineTo(flap * 2, tH - 0.38);
+      ctx.quadraticCurveTo(-0.05 + flap, tH - 0.22, -0.035, tH - 0.02);
       ctx.closePath();
       ctx.fillStyle = col(hex(o.tieColor));
       ctx.fill();
@@ -399,6 +429,16 @@ export class CharacterVisual implements ICharacterVisual {
     ctx.ellipse(0.02, hY, headR * 0.92, headR, 0, 0, Math.PI * 2);
     ctx.fillStyle = skin;
     ctx.fill();
+    // 臉部 cel 陰影（後下緣月牙）
+    if (!tinted) {
+      ctx.save();
+      ctx.clip();
+      ctx.fillStyle = 'rgba(70,35,25,0.18)';
+      ctx.beginPath();
+      ctx.ellipse(-headR * 0.32, hY - headR * 0.3, headR * 0.85, headR * 0.8, 0.3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
     ctx.stroke();
     // 油頭髮型（上半覆蓋）
     ctx.beginPath();

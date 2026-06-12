@@ -106,6 +106,11 @@ export class LevelRunner {
     if (import.meta.env.DEV) {
       (window as any).__win = () => { this.tracker.finalize(); this.bossDead = true; this.succeed(); };
       (window as any).__lose = () => this.fail();
+      // 傳送（略過沿途鎖屏節，供場景檢視）
+      (window as any).__tp = (x: number) => {
+        this.player.position.x = x;
+        while (this.sectionIdx < this.level.waves.length && this.sectionXs[this.sectionIdx] < x) this.sectionIdx += 1;
+      };
     }
   }
 

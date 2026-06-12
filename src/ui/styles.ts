@@ -179,18 +179,18 @@ export function ensureStyles(): void {
 
 /* ───────── 關卡地圖 ───────── */
 .tsb-map-wrap { position: relative; width: min(960px, 92vw); }
-.tsb-map-line { position: absolute; left: 4%; right: 4%; top: 50%; height: 6px; transform: translateY(-50%); border-radius: 3px; background: linear-gradient(90deg, #00D4FF, #7B2FFF, #FF6B35); box-shadow: 0 0 16px rgba(0, 212, 255, 0.6); }
+.tsb-map-line { position: absolute; left: 4%; right: 4%; top: 29px; height: 6px; border-radius: 3px; background: linear-gradient(90deg, #00D4FF, #7B2FFF, #FF6B35); box-shadow: 0 0 16px rgba(0, 212, 255, 0.6); }
 .tsb-map-stations { position: relative; display: flex; justify-content: space-between; padding: 0 2%; }
-.tsb-station { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 150px; background: none; border: none; cursor: pointer; font-family: 'Noto Sans TC', sans-serif; color: var(--tsb-text); padding: 12px 4px; }
+.tsb-station { position: relative; display: flex; flex-direction: column; align-items: center; gap: 10px; width: 150px; background: none; border: none; cursor: pointer; font-family: 'Noto Sans TC', sans-serif; color: var(--tsb-text); padding: 12px 4px; }
 .tsb-station-dot { width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--tsb-primary); background: var(--tsb-bg); box-shadow: 0 0 14px rgba(0, 212, 255, 0.8); display: flex; align-items: center; justify-content: center; font-size: 15px; transition: transform 0.15s ease; }
 .tsb-station:hover:not(:disabled) .tsb-station-dot { transform: scale(1.25); }
 .tsb-station:hover:not(:disabled) .tsb-station-name { color: var(--tsb-primary); }
 .tsb-station:disabled { cursor: not-allowed; }
 .tsb-station--locked { opacity: 0.45; }
 .tsb-station--locked .tsb-station-dot { border-color: rgba(230, 237, 243, 0.3); box-shadow: none; filter: grayscale(1); }
-.tsb-station-name { font-size: 16px; font-weight: 700; letter-spacing: 0.08em; transition: color 0.15s ease; }
+.tsb-station-name { font-size: 15px; font-weight: 700; letter-spacing: 0.04em; white-space: nowrap; transition: color 0.15s ease; }
 .tsb-station-sub { font-size: 11px; color: rgba(230, 237, 243, 0.55); line-height: 1.4; min-height: 30px; }
-.tsb-rank-badge { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; font-weight: 900; font-size: 14px; }
+.tsb-rank-badge { position: absolute; top: 2px; right: calc(50% - 34px); display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; font-weight: 900; font-size: 13px; border: 2px solid rgba(13,17,23,0.9); }
 .tsb-rank-S { background: linear-gradient(135deg, #FFD75E, #FF9D2E); color: #2A1A00; box-shadow: 0 0 12px rgba(255, 215, 94, 0.9); }
 .tsb-rank-A { background: linear-gradient(135deg, #E8ECF2, #9BA7B8); color: #1A2230; box-shadow: 0 0 8px rgba(232, 236, 242, 0.7); }
 .tsb-rank-B { background: linear-gradient(135deg, #D08A4E, #8C5A2E); color: #2A1400; }
