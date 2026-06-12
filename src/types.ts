@@ -135,6 +135,8 @@ export interface LevelDef {
   bossId: string;
   waves: EnemyWave[];
   envTheme: 'neon' | 'nightmarket' | 'temple' | 'skybridge' | 'rooftop';
+  /** 關卡橫向長度（公尺）：橫向推進 + 鎖屏戰鬥的世界寬度 */
+  length: number;
 }
 
 // ───────────────────────── 玩家 / 存檔 ─────────────────────────

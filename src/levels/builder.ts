@@ -1,477 +1,620 @@
-// 五個台北場景建造器：程式化 low-poly 為主，MANIFEST 有 Kenney 件時混搭擺放。
-import * as THREE from 'three';
-import { MANIFEST } from '../core/manifest';
-import { loadGLB, cloneScene } from '../core/assets';
+// 2D 視差舞台：五關台北場景（程式化繪製，Dad'n Me 低飽和手繪感）。
+// 三層結構：天空(0) → 遠景剪影(0.25) → 中景街面(1.0) → 地面 → [實體層由 level.ts 繪] → 前景(1.25)。
+// AI 背景圖到位後可在 drawBackground 開頭以圖層取代對應 pass。
+import { Vec3 } from '../core/vec';
+import { DEPTH, type GameCamera } from '../core/camera';
+
+export type EnvTheme = 'neon' | 'nightmarket' | 'temple' | 'skybridge' | 'rooftop';
 
 export interface Environment {
+  length: number;
   bounds: { minX: number; maxX: number; minZ: number; maxZ: number };
-  /** protect 任務目標物（香爐/錢箱），無則 null */
-  protectTarget: THREE.Object3D | null;
+  protectTarget: Vec3 | null;
   update(dt: number, elapsed: number): void;
+  drawBackground(ctx: CanvasRenderingContext2D, cam: GameCamera, w: number, h: number, elapsed: number): void;
+  drawForeground(ctx: CanvasRenderingContext2D, cam: GameCamera, w: number, h: number, elapsed: number): void;
 }
 
-type Theme = 'neon' | 'nightmarket' | 'temple' | 'skybridge' | 'rooftop';
-
-const NEON_COLORS = [0x00d4ff, 0x7b2fff, 0xff6b35, 0xff2f7b, 0x2fff7b];
-
-function mat(color: number, opts: Partial<THREE.MeshStandardMaterialParameters> = {}): THREE.MeshStandardMaterial {
-  return new THREE.MeshStandardMaterial({ color, roughness: 0.85, ...opts });
+/** 種子隨機（場景佈局固定） */
+function mulberry32(seed: number): () => number {
+  let a = seed;
+  return () => {
+    a |= 0; a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
 }
 
-function box(w: number, h: number, d: number, material: THREE.Material): THREE.Mesh {
-  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
-  m.castShadow = true;
-  m.receiveShadow = true;
-  return m;
+interface ThemeSpec {
+  skyTop: string;
+  skyBottom: string;
+  farColor: string;
+  ground: string;
+  groundLine: string;
+  signs: string[];
 }
 
-/** 霓虹招牌（直式，發光） */
-function neonSign(h: number, color: number): THREE.Mesh {
-  return new THREE.Mesh(
-    new THREE.BoxGeometry(0.25, h, 0.7),
-    new THREE.MeshStandardMaterial({ color: 0x101010, emissive: color, emissiveIntensity: 2.2 }),
-  );
+const THEMES: Record<EnvTheme, ThemeSpec> = {
+  neon: {
+    skyTop: '#0a0d1e', skyBottom: '#1d2342', farColor: '#141930',
+    ground: '#2a2c33', groundLine: '#3a3d46',
+    signs: ['電影街', 'KTV', '萬年', '藥妝', '紅樓', '刺青', '電玩', '滷味'],
+  },
+  nightmarket: {
+    skyTop: '#120c08', skyBottom: '#2c1a0e', farColor: '#1e1410',
+    ground: '#3a3026', groundLine: '#4a3e30',
+    signs: ['士林夜市', '蚵仔煎', '大腸包小腸', '珍珠奶茶', '雞排', '臭豆腐', '藥燉排骨'],
+  },
+  temple: {
+    skyTop: '#080a14', skyBottom: '#1a1626', farColor: '#120f1c',
+    ground: '#4a443c', groundLine: '#5a544a',
+    signs: ['龍山寺', '平安', '光明', '祈福'],
+  },
+  skybridge: {
+    skyTop: '#0a1220', skyBottom: '#16263e', farColor: '#101a2e',
+    ground: '#33373f', groundLine: '#454a54',
+    signs: ['信義', 'SALE', '百貨', 'ATT', '威秀'],
+  },
+  rooftop: {
+    skyTop: '#05070f', skyBottom: '#0e1526', farColor: '#0a1020',
+    ground: '#23262c', groundLine: '#34383f',
+    signs: [],
+  },
+};
+
+interface Prop {
+  x: number;       // world x
+  kind: string;
+  variant: number; // 0-1 隨機參數
+  text?: string;
 }
 
-/** 街屋：樓體 + 屋頂水塔 + 招牌 */
-function shopHouse(width: number, height: number, hue: number): THREE.Group {
-  const g = new THREE.Group();
-  const body = box(width, height, 4, mat(new THREE.Color().setHSL(hue, 0.18, 0.16).getHex()));
-  body.position.y = height / 2;
-  g.add(body);
-  // 一樓亮燈騎樓
-  const storefront = new THREE.Mesh(
-    new THREE.BoxGeometry(width * 0.85, 1.6, 0.2),
-    new THREE.MeshStandardMaterial({ color: 0x332211, emissive: 0xffcc77, emissiveIntensity: 0.9 }),
-  );
-  storefront.position.set(0, 1.1, 2.0);
-  g.add(storefront);
-  if (Math.random() > 0.35) {
-    const sign = neonSign(1.2 + Math.random() * 2.2, NEON_COLORS[Math.floor(Math.random() * NEON_COLORS.length)]);
-    sign.position.set((Math.random() - 0.5) * width * 0.6, height * (0.45 + Math.random() * 0.3), 2.2);
-    g.add(sign);
-  }
-  const tank = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.9, 8), mat(0x8899aa));
-  tank.position.set(width * 0.25, height + 0.45, -0.5);
-  g.add(tank);
-  return g;
-}
+export function buildEnvironment(theme: EnvTheme, length: number): Environment {
+  const spec = THEMES[theme];
+  const rand = mulberry32(theme.length * 7919 + length);
+  const props: Prop[] = [];
 
-/** 紅燈籠串 */
-function lanternString(length: number, count: number): THREE.Group {
-  const g = new THREE.Group();
-  const lanternMat = new THREE.MeshStandardMaterial({ color: 0xcc2222, emissive: 0xff4422, emissiveIntensity: 1.4 });
-  for (let i = 0; i < count; i++) {
-    const l = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 6), lanternMat);
-    l.scale.y = 1.25;
-    l.position.set((i / (count - 1) - 0.5) * length, Math.sin((i / (count - 1)) * Math.PI) * -0.4, 0);
-    g.add(l);
-  }
-  return g;
-}
-
-/** 台北 101：先放程式化版本，GLB（CC-BY, Elaine Wijaya Oey）載到後原地替換 */
-function placeTaipei101(scene: THREE.Scene, pos: THREE.Vector3, targetHeight: number): void {
-  const procedural = taipei101(targetHeight / 40);
-  procedural.position.copy(pos);
-  scene.add(procedural);
-  const url = MANIFEST.landmarks.taipei101;
-  if (!url) return;
-  void loadGLB(url).then((gltf) => {
-    if (!gltf) return;
-    const model = cloneScene(gltf);
-    const bbox = new THREE.Box3().setFromObject(model);
-    const h = Math.max(0.001, bbox.max.y - bbox.min.y);
-    model.scale.setScalar(targetHeight / h);
-    model.position.copy(pos);
-    model.position.y = pos.y - bbox.min.y * (targetHeight / h);
-    scene.remove(procedural);
-    scene.add(model);
-  });
-}
-
-/** 程式化台北 101 */
-export function taipei101(scale = 1): THREE.Group {
-  const g = new THREE.Group();
-  const m = new THREE.MeshStandardMaterial({
-    color: 0x1d3a52, roughness: 0.3, metalness: 0.6,
-    emissive: 0x00d4ff, emissiveIntensity: 0.18,
-  });
-  const base = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 3.4, 9, 4), m);
-  base.position.y = 4.5;
-  g.add(base);
-  for (let s = 0; s < 8; s++) {
-    const seg = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 2.0, 3.6, 4), m);
-    seg.position.y = 9 + s * 3.6 + 1.8;
-    g.add(seg);
-  }
-  const spire = new THREE.Mesh(new THREE.ConeGeometry(0.55, 7, 4), m);
-  spire.position.y = 9 + 8 * 3.6 + 3.5;
-  g.add(spire);
-  g.scale.setScalar(scale);
-  return g;
-}
-
-/** 夜市攤車 */
-function stall(color: number): THREE.Group {
-  const g = new THREE.Group();
-  const counter = box(2.4, 1.0, 1.2, mat(0x6b4a2b));
-  counter.position.y = 0.5;
-  g.add(counter);
-  const poleM = mat(0x444444);
-  for (const sx of [-1, 1]) {
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.6, 6), poleM);
-    pole.position.set(sx * 1.05, 1.6, 0);
-    g.add(pole);
-  }
-  const awning = box(2.6, 0.1, 1.5, new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.25 }));
-  awning.position.y = 2.4;
-  awning.rotation.x = -0.12;
-  g.add(awning);
-  const bulb = new THREE.Mesh(
-    new THREE.SphereGeometry(0.09, 6, 6),
-    new THREE.MeshStandardMaterial({ color: 0xffee99, emissive: 0xffdd66, emissiveIntensity: 2.5 }),
-  );
-  bulb.position.set(0, 1.9, 0.5);
-  g.add(bulb);
-  return g;
-}
-
-/** 廟宇正面（多層翹簷屋頂） */
-function templeFacade(): THREE.Group {
-  const g = new THREE.Group();
-  const wall = box(14, 5, 3, mat(0x7a2e1d));
-  wall.position.y = 2.5;
-  g.add(wall);
-  const roofM = mat(0xb8651f, { emissive: 0x331a00, emissiveIntensity: 0.3 });
-  for (let tier = 0; tier < 2; tier++) {
-    const roof = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 8.5 - tier * 2.5, 1.6, 4), roofM);
-    roof.position.y = 5.8 + tier * 1.7;
-    roof.rotation.y = Math.PI / 4;
-    roof.scale.z = 0.45;
-    g.add(roof);
-  }
-  // 門洞燈光
-  for (const sx of [-4, 0, 4]) {
-    const door = new THREE.Mesh(
-      new THREE.BoxGeometry(1.6, 2.6, 0.3),
-      new THREE.MeshStandardMaterial({ color: 0x1a0d00, emissive: 0xff8833, emissiveIntensity: 0.8 }),
-    );
-    door.position.set(sx, 1.3, 1.6);
-    g.add(door);
-  }
-  return g;
-}
-
-/** 香爐（protect 目標） */
-function incenseBurner(): THREE.Group {
-  const g = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.7, 1.1, 10), mat(0x886622, { metalness: 0.7, roughness: 0.35 }));
-  body.position.y = 0.85;
-  g.add(body);
-  for (const sx of [-0.9, 0.9]) {
-    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.6, 6), mat(0x665511));
-    leg.position.set(sx, 0.3, 0);
-    g.add(leg);
-  }
-  const glow = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.75, 0.75, 0.12, 10),
-    new THREE.MeshStandardMaterial({ color: 0xff5500, emissive: 0xff6622, emissiveIntensity: 1.8 }),
-  );
-  glow.position.y = 1.45;
-  g.add(glow);
-  return g;
-}
-
-/** 共用：地面 + 邊界 + 基礎燈光 */
-function baseSetup(scene: THREE.Scene, w: number, d: number, groundColor: number, fogColor: number, fogFar: number): void {
-  scene.fog = new THREE.Fog(fogColor, fogFar * 0.45, fogFar);
-  scene.background = new THREE.Color(fogColor);
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(w * 2.4, d * 2.4), mat(groundColor, { roughness: 0.95 }));
-  ground.rotation.x = -Math.PI / 2;
-  ground.receiveShadow = true;
-  scene.add(ground);
-
-  scene.add(new THREE.AmbientLight(0x66708a, 1.45));
-  const hemi = new THREE.HemisphereLight(0x33415e, 0x1a1410, 0.7);
-  scene.add(hemi);
-  // 戰鬥區中央柔光，確保角色清晰可讀
-  const center = new THREE.PointLight(0xbfd4ff, 30, Math.max(w, d) * 2.2, 1.6);
-  center.position.set(0, 9, 0);
-  scene.add(center);
-  const key = new THREE.DirectionalLight(0xaabbff, 1.25);
-  key.position.set(8, 18, 6);
-  key.castShadow = true;
-  key.shadow.mapSize.set(1024, 1024);
-  key.shadow.camera.left = -w; key.shadow.camera.right = w;
-  key.shadow.camera.top = d; key.shadow.camera.bottom = -d;
-  scene.add(key);
-}
-
-/** 放置單件 Kenney GLB（非同步 fire-and-forget，載入失敗就靜默跳過） */
-function placeGLB(scene: THREE.Scene, key: string, x: number, z: number, ry = 0, scale = 1): void {
-  const url = MANIFEST.city[key];
-  if (!url) return;
-  void loadGLB(url).then((gltf) => {
-    if (!gltf) return;
-    const inst = cloneScene(gltf);
-    inst.scale.setScalar(scale);
-    inst.position.set(x, 0, z);
-    inst.rotation.y = ry;
-    scene.add(inst);
-  });
-}
-
-/** 散布 Kenney 建築（非同步，載到就放） */
-async function scatterCityGLBs(scene: THREE.Scene, positions: [number, number, number][]): Promise<void> {
-  const keys = Object.keys(MANIFEST.city).filter((k) => k.toLowerCase().includes('building'));
-  if (keys.length === 0) return;
-  const gltfs = await Promise.all(keys.slice(0, 8).map((k) => loadGLB(MANIFEST.city[k])));
-  const valid = gltfs.filter((g): g is NonNullable<typeof g> => !!g);
-  if (valid.length === 0) return;
-  positions.forEach(([x, ry, z], i) => {
-    const inst = cloneScene(valid[i % valid.length]);
-    // Kenney 城市件約 1 單位寬，放大至街屋尺度
-    inst.scale.setScalar(4);
-    inst.position.set(x, 0, z);
-    inst.rotation.y = ry;
-    scene.add(inst);
-  });
-}
-
-/** 路燈一排（Kenney streetLight + 自帶光暈球） */
-function streetLights(scene: THREE.Scene, spots: [number, number, number][]): void {
-  for (const [x, z, ry] of spots) {
-    placeGLB(scene, 'streetLight', x, z, ry, 3);
-    const glow = new THREE.Mesh(
-      new THREE.SphereGeometry(0.16, 8, 8),
-      new THREE.MeshStandardMaterial({ color: 0xffe9a0, emissive: 0xffd870, emissiveIntensity: 2.4 }),
-    );
-    glow.position.set(x, 3.2, z);
-    scene.add(glow);
-  }
-}
-
-export function buildEnvironment(scene: THREE.Scene, theme: Theme): Environment {
-  const animated: ((dt: number, t: number) => void)[] = [];
-  let protectTarget: THREE.Object3D | null = null;
-  let bounds = { minX: -16, maxX: 16, minZ: -12, maxZ: 12 };
-
+  // ── 佈置中景道具（依主題） ──
+  const every = (gap: number, kind: string, withText = false) => {
+    for (let x = 2 + rand() * gap; x < length - 2; x += gap * (0.7 + rand() * 0.6)) {
+      props.push({ x, kind, variant: rand(), text: withText ? spec.signs[Math.floor(rand() * spec.signs.length)] : undefined });
+    }
+  };
   switch (theme) {
-    case 'neon': { // 西門町徒步區
-      bounds = { minX: -17, maxX: 17, minZ: -13, maxZ: 13 };
-      baseSetup(scene, 20, 16, 0x23262e, 0x0d1117, 70);
-      // 環繞街屋
-      for (let i = 0; i < 14; i++) {
-        const angle = (i / 14) * Math.PI * 2;
-        const r = 21 + Math.random() * 4;
-        const h = shopHouse(4 + Math.random() * 3, 6 + Math.random() * 8, 0.6 + Math.random() * 0.15);
-        h.position.set(Math.cos(angle) * r, 0, Math.sin(angle) * r);
-        h.lookAt(0, 0, 0);
-        scene.add(h);
-      }
-      // 紅樓剪影（八角樓）
-      const redHouse = new THREE.Group();
-      const oct = new THREE.Mesh(new THREE.CylinderGeometry(4, 4, 7, 8), mat(0x8c2f24));
-      oct.position.y = 3.5;
-      redHouse.add(oct);
-      const roof = new THREE.Mesh(new THREE.ConeGeometry(4.6, 2.4, 8), mat(0x4a1812));
-      roof.position.y = 8.2;
-      redHouse.add(roof);
-      redHouse.position.set(0, 0, -24);
-      scene.add(redHouse);
-      // 行人地磚格
-      const grid = new THREE.GridHelper(34, 17, 0x333a45, 0x262c36);
-      grid.position.y = 0.01;
-      scene.add(grid);
-      void scatterCityGLBs(scene, [[-26, 0.4, 8], [26, -0.4, -6], [-24, 1.2, -14], [25, 2.2, 12]]);
-      // 路燈圍繞廣場四角 + 施工區小景
-      streetLights(scene, [[-14, -10, 0.8], [14, -10, -0.8], [-14, 10, 2.4], [14, 10, -2.4]]);
-      placeGLB(scene, 'constructionCone', -8, 6, 0, 2.2);
-      placeGLB(scene, 'constructionCone', -7.2, 6.8, 0.5, 2.2);
-      placeGLB(scene, 'constructionBarrier', -9, 7.5, 0.3, 2.6);
+    case 'neon':
+      every(5.5, 'storefront', true);
+      every(9, 'scooter');
+      every(13, 'lamp');
       break;
-    }
+    case 'nightmarket':
+      every(4.5, 'stall', true);
+      every(7, 'lanternString');
+      every(11, 'scooter');
+      break;
+    case 'temple':
+      every(6, 'pillar');
+      every(4, 'lantern');
+      break;
+    case 'skybridge':
+      every(7, 'glasspanel');
+      every(10, 'billboard', true);
+      every(15, 'lamp');
+      break;
+    case 'rooftop':
+      every(12, 'vent');
+      every(18, 'beacon');
+      break;
+  }
+  props.sort((a, b) => a.x - b.x);
 
-    case 'nightmarket': { // 士林夜市窄巷
-      bounds = { minX: -28, maxX: 28, minZ: -6, maxZ: 6 };
-      baseSetup(scene, 32, 10, 0x1d1a14, 0x0e0a08, 55);
-      // 兩排攤車 + 街屋牆
-      for (let x = -26; x <= 26; x += 5.5) {
-        for (const side of [-1, 1]) {
-          const s = stall(NEON_COLORS[Math.floor(Math.random() * NEON_COLORS.length)]);
-          s.position.set(x + (Math.random() - 0.5) * 1.2, 0, side * 7.4);
-          s.rotation.y = side > 0 ? Math.PI : 0;
-          scene.add(s);
-          const wall = shopHouse(5.5, 5 + Math.random() * 4, 0.08 + Math.random() * 0.06);
-          wall.position.set(x, 0, side * 12);
-          if (side > 0) wall.rotation.y = Math.PI;
-          scene.add(wall);
+  // ── 遠景剪影 tile（offscreen，視差 0.25） ──
+  const farTile = document.createElement('canvas');
+  farTile.width = 1024;
+  farTile.height = 512;
+  {
+    const c = farTile.getContext('2d')!;
+    const fr = mulberry32(42);
+    if (theme === 'rooftop') {
+      // 高空視角：底部城市燈海
+      for (let i = 0; i < 400; i++) {
+        c.fillStyle = `rgba(${180 + fr() * 75}, ${140 + fr() * 80}, ${60 + fr() * 60}, ${0.25 + fr() * 0.5})`;
+        c.fillRect(fr() * 1024, 380 + fr() * 132, 1.5 + fr() * 2, 1.5 + fr() * 2);
+      }
+    } else {
+      let x = 0;
+      while (x < 1024) {
+        const bw = 60 + fr() * 110;
+        const bh = 130 + fr() * 240;
+        c.fillStyle = spec.farColor;
+        c.fillRect(x, 512 - bh, bw, bh);
+        // 點燈窗
+        c.fillStyle = 'rgba(255, 220, 140, 0.35)';
+        for (let wy = 512 - bh + 12; wy < 500; wy += 22) {
+          for (let wx = x + 8; wx < x + bw - 10; wx += 18) {
+            if (fr() > 0.55) c.fillRect(wx, wy, 7, 10);
+          }
         }
-        // 燈籠串橫跨巷子
-        if ((x / 5.5) % 2 === 0) {
-          const ls = lanternString(13, 6);
-          ls.position.set(x, 4.2, 0);
-          ls.rotation.y = Math.PI / 2;
-          scene.add(ls);
+        x += bw + 6 + fr() * 30;
+      }
+      if (theme === 'skybridge' || theme === 'neon') {
+        // 台北 101 剪影
+        const cx = 700;
+        c.fillStyle = spec.farColor;
+        for (let i = 0; i < 8; i++) {
+          const sw = 64 - i * 5.5;
+          c.beginPath();
+          c.moveTo(cx - sw / 2 - 5, 512 - 60 - i * 42);
+          c.lineTo(cx + sw / 2 + 5, 512 - 60 - i * 42);
+          c.lineTo(cx + sw / 2 - 4, 512 - 60 - (i + 1) * 42);
+          c.lineTo(cx - sw / 2 + 4, 512 - 60 - (i + 1) * 42);
+          c.closePath();
+          c.fill();
         }
+        c.fillRect(cx - 3, 512 - 60 - 8 * 42 - 50, 6, 50); // 塔尖
+        c.fillStyle = 'rgba(120, 200, 255, 0.5)';
+        c.fillRect(cx - 2, 512 - 60 - 8 * 42 - 50, 4, 6); // 警示燈
       }
-      // 夜市雜物（陽傘縮小放攤位間隙）
-      placeGLB(scene, 'parasolA', -14.8, 8.8, 0.4, 1.2);
-      placeGLB(scene, 'parasolB', 11.2, -8.8, 2.1, 1.2);
-      placeGLB(scene, 'constructionCone', -26, -4.8, 0, 1.6);
-      placeGLB(scene, 'constructionCone', 26, 4.8, 0, 1.6);
-      // 巷內暖色補光
-      for (const lx of [-18, 0, 18]) {
-        const warm = new THREE.PointLight(0xffbb66, 18, 22, 1.8);
-        warm.position.set(lx, 4.5, 0);
-        scene.add(warm);
+      if (theme === 'temple') {
+        // 廟宇燕尾脊剪影
+        c.fillStyle = '#1a1226';
+        c.beginPath();
+        c.moveTo(80, 360);
+        c.quadraticCurveTo(230, 290, 400, 355);
+        c.quadraticCurveTo(420, 300, 445, 290);
+        c.lineTo(400, 380);
+        c.lineTo(95, 380);
+        c.quadraticCurveTo(65, 300, 40, 288);
+        c.closePath();
+        c.fill();
+        c.fillRect(80, 370, 330, 142);
       }
-      break;
-    }
-
-    case 'temple': { // 龍山寺廟埕
-      bounds = { minX: -15, maxX: 15, minZ: -13, maxZ: 15 };
-      baseSetup(scene, 18, 18, 0x2a241c, 0x0c0a10, 60);
-      const facade = templeFacade();
-      facade.position.set(0, 0, -16);
-      scene.add(facade);
-      // 香爐（protect 目標）置中偏後
-      const burner = incenseBurner();
-      burner.position.set(0, 0, -8);
-      scene.add(burner);
-      protectTarget = burner;
-      // 圍牆與燈籠
-      for (const sx of [-17, 17]) {
-        const wall = box(1, 2.4, 32, mat(0x6e3a28));
-        wall.position.set(sx, 1.2, 0);
-        scene.add(wall);
-      }
-      for (let i = 0; i < 6; i++) {
-        const ls = lanternString(8, 4);
-        ls.position.set(-12 + i * 5, 3.4, -14.5);
-        scene.add(ls);
-      }
-      streetLights(scene, [[-13, 12, 2.4], [13, 12, -2.4]]);
-      // 香爐煙（粒子感：上升小方塊）
-      const smokeM = new THREE.MeshBasicMaterial({ color: 0x99aabb, transparent: true, opacity: 0.25 });
-      const puffs: THREE.Mesh[] = [];
-      for (let i = 0; i < 5; i++) {
-        const p = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 0.15), smokeM);
-        p.position.set(0, 1.6 + i * 0.5, -8);
-        scene.add(p);
-        puffs.push(p);
-      }
-      animated.push((dt, t) => {
-        puffs.forEach((p, i) => {
-          p.position.y = 1.6 + ((t * 0.5 + i * 0.5) % 2.8);
-          p.position.x = Math.sin(t + i) * 0.2;
-        });
-      });
-      break;
-    }
-
-    case 'skybridge': { // 信義商圈空橋
-      bounds = { minX: -32, maxX: 32, minZ: -4.5, maxZ: 4.5 };
-      baseSetup(scene, 36, 8, 0x2c3140, 0x0a0d16, 80);
-      // 橋面玻璃欄杆
-      const railM = new THREE.MeshStandardMaterial({ color: 0x88ccee, transparent: true, opacity: 0.25, metalness: 0.8 });
-      for (const side of [-1, 1]) {
-        const rail = box(66, 1.2, 0.12, railM);
-        rail.position.set(0, 0.6, side * 5.2);
-        scene.add(rail);
-      }
-      // 周圍玻璃帷幕大樓（下方城市感：橋是高架的）
-      for (let i = 0; i < 16; i++) {
-        const h = 14 + Math.random() * 22;
-        const tower = box(6 + Math.random() * 4, h, 6 + Math.random() * 4,
-          mat(0x223349, { metalness: 0.6, roughness: 0.3, emissive: 0x14405c, emissiveIntensity: 0.85 }));
-        const x = -36 + Math.random() * 72;
-        const z = (10 + Math.random() * 16) * (i % 2 === 0 ? 1 : -1);
-        tower.position.set(x, h / 2 - 9, z); // 樓體下沉營造高架感
-        scene.add(tower);
-        // 窗格光點
-        const lights = new THREE.Mesh(
-          new THREE.PlaneGeometry(4, h * 0.8),
-          new THREE.MeshBasicMaterial({ color: 0xffe9a0, transparent: true, opacity: 0.28 }),
-        );
-        lights.position.set(x, h / 2 - 9, z - (z > 0 ? 3.5 : -3.5));
-        if (z < 0) lights.rotation.y = Math.PI;
-        scene.add(lights);
-      }
-      // 101 遠景
-      placeTaipei101(scene, new THREE.Vector3(38, -9, -20), 60);
-      // 橋上路燈與告示
-      streetLights(scene, [[-22, -4.6, 0], [0, 4.6, Math.PI], [22, -4.6, 0]]);
-      placeGLB(scene, 'signHighway', -30, -4.2, 0.4, 2.5);
-      break;
-    }
-
-    case 'rooftop': { // 台北 101 頂樓直升機坪
-      bounds = { minX: -13, maxX: 13, minZ: -13, maxZ: 13 };
-      baseSetup(scene, 16, 16, 0x252a33, 0x06080e, 90);
-      // 直升機坪圓環 + H 字
-      const pad = new THREE.Mesh(new THREE.RingGeometry(8, 8.8, 48), new THREE.MeshBasicMaterial({ color: 0xffcc00, side: THREE.DoubleSide }));
-      pad.rotation.x = -Math.PI / 2;
-      pad.position.y = 0.02;
-      scene.add(pad);
-      const hBar = (w: number, d: number, x: number, z: number) => {
-        const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), new THREE.MeshBasicMaterial({ color: 0xffcc00, side: THREE.DoubleSide }));
-        m.rotation.x = -Math.PI / 2;
-        m.position.set(x, 0.02, z);
-        scene.add(m);
-      };
-      hBar(1, 6, -2, 0); hBar(1, 6, 2, 0); hBar(3, 1, 0, 0);
-      // 塔身在旁（頂樓平台視角）
-      placeTaipei101(scene, new THREE.Vector3(-26, -40, -22), 48);
-      // 樓下城市光海
-      const cityGlow = new THREE.Mesh(
-        new THREE.PlaneGeometry(300, 300),
-        new THREE.MeshBasicMaterial({ color: 0x16202e }),
-      );
-      cityGlow.rotation.x = -Math.PI / 2;
-      cityGlow.position.y = -30;
-      scene.add(cityGlow);
-      for (let i = 0; i < 80; i++) {
-        const dot = new THREE.Mesh(
-          new THREE.BoxGeometry(0.8, 0.8, 0.8),
-          new THREE.MeshBasicMaterial({ color: NEON_COLORS[i % NEON_COLORS.length], transparent: true, opacity: 0.7 }),
-        );
-        dot.position.set((Math.random() - 0.5) * 200, -29, (Math.random() - 0.5) * 200);
-        scene.add(dot);
-      }
-      // 頂樓設備與護欄
-      placeGLB(scene, 'constructionBarrier', -11, -8, 1.57, 2.4);
-      placeGLB(scene, 'constructionBarrier', 11, 8, 1.57, 2.4);
-      // 強風感：旗幟/天線搖晃
-      const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.08, 4, 6), mat(0xaa2222));
-      antenna.position.set(11, 2, -11);
-      scene.add(antenna);
-      animated.push((_dt, t) => {
-        antenna.rotation.z = Math.sin(t * 3) * 0.06;
-      });
-      // 邊緣警示燈
-      for (const [cx, cz] of [[-13, -13], [13, -13], [-13, 13], [13, 13]] as const) {
-        const beacon = new THREE.Mesh(
-          new THREE.SphereGeometry(0.18, 8, 8),
-          new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0xff2222, emissiveIntensity: 2 }),
-        );
-        beacon.position.set(cx, 0.8, cz);
-        scene.add(beacon);
-        const beaconMat = beacon.material as THREE.MeshStandardMaterial;
-        animated.push((_dt, t) => {
-          beaconMat.emissiveIntensity = 1.2 + Math.sin(t * 4) * 1.1;
-        });
-      }
-      break;
     }
   }
 
-  return {
-    bounds,
+  const protectTarget = theme === 'temple' ? new Vec3(length * 0.5, 0, 1.0) : null;
+  const star = mulberry32(7);
+  const stars: [number, number, number][] = Array.from({ length: 90 }, () => [star() * 2000, star() * 300, 0.4 + star() * 1.4]);
+  const _gv = new Vec3();
+
+  const env: Environment = {
+    length,
+    bounds: { minX: 0.6, maxX: length - 0.6, minZ: 0.4, maxZ: DEPTH - 0.2 },
     protectTarget,
-    update(dt, elapsed) {
-      for (const fn of animated) fn(dt, elapsed);
+    update() { /* 動畫全在 draw 內以 elapsed 驅動 */ },
+
+    drawBackground(ctx, cam, w, h, elapsed) {
+      const gTop = cam.groundTopY;
+      // 1) 天空
+      const sky = ctx.createLinearGradient(0, 0, 0, gTop);
+      sky.addColorStop(0, spec.skyTop);
+      sky.addColorStop(1, spec.skyBottom);
+      ctx.fillStyle = sky;
+      ctx.fillRect(0, 0, w, gTop + 2);
+      if (theme === 'rooftop' || theme === 'temple') {
+        ctx.fillStyle = 'rgba(255,255,255,0.7)';
+        for (const [sx, sy, sr] of stars) {
+          const px = ((sx + cam.parallaxOffset(0.05)) % (w + 100) + w + 100) % (w + 100) - 50;
+          ctx.globalAlpha = 0.3 + 0.5 * Math.abs(Math.sin(elapsed * 0.8 + sx));
+          ctx.fillRect(px, sy * (gTop / 300), sr, sr);
+        }
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = '#f5edd8';
+        ctx.beginPath();
+        ctx.arc(w * 0.78, gTop * 0.22, 26, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // 2) 遠景剪影（視差 0.25）
+      const farH = gTop * 0.72;
+      const farY = gTop - farH;
+      const off = cam.parallaxOffset(0.25);
+      const tw = farTile.width * (farH / farTile.height);
+      let fx = ((off % tw) + tw) % tw - tw;
+      while (fx < w) {
+        ctx.drawImage(farTile, fx, farY, tw, farH);
+        fx += tw;
+      }
+
+      // 3) 地面
+      const ground = ctx.createLinearGradient(0, gTop, 0, h);
+      ground.addColorStop(0, spec.groundLine);
+      ground.addColorStop(0.12, spec.ground);
+      ground.addColorStop(1, shade(spec.ground, -18));
+      ctx.fillStyle = ground;
+      ctx.fillRect(0, gTop, w, h - gTop);
+      // 地面縱向格線（透視感）
+      ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+      ctx.lineWidth = 2;
+      const m = cam.ppm;
+      const startX = Math.floor((cam.x - cam.halfW) / 4) * 4;
+      for (let gx = startX; gx < cam.x + cam.halfW + 4; gx += 4) {
+        const top = cam.worldToScreen(_gv.set(gx, 0, 0));
+        const topX = top.x, topY = top.y;
+        const bot = cam.worldToScreen(_gv.set(gx, 0, DEPTH));
+        ctx.beginPath();
+        ctx.moveTo(topX, topY);
+        ctx.lineTo(bot.x, bot.y);
+        ctx.stroke();
+      }
+      if (theme === 'rooftop') drawHelipad(ctx, cam, length);
+
+      // 4) 中景道具（街面後緣 z=0）
+      const viewMin = cam.x - cam.halfW - 8;
+      const viewMax = cam.x + cam.halfW + 8;
+      for (const p of props) {
+        if (p.x < viewMin || p.x > viewMax) continue;
+        const base = cam.worldToScreen(_gv.set(p.x, 0, 0));
+        drawProp(ctx, p, base.x, base.y, m * 0.74, elapsed);
+      }
+      // 香爐（protect 目標）
+      if (protectTarget) {
+        const b = cam.worldToScreen(protectTarget);
+        drawBurner(ctx, b.x, b.y, m * b.scale, elapsed);
+      }
+    },
+
+    drawForeground(ctx, cam, w, h, elapsed) {
+      // 前景電線（台北天際的亂線）
+      if (theme === 'neon' || theme === 'nightmarket' || theme === 'temple') {
+        ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+        ctx.lineWidth = 3;
+        const off = cam.parallaxOffset(1.25);
+        for (let i = 0; i < 2; i++) {
+          const y0 = h * (0.08 + i * 0.05);
+          ctx.beginPath();
+          for (let px = -50; px <= w + 50; px += 40) {
+            const sag = Math.sin((px - off) * 0.012 + i * 2) * 14;
+            if (px === -50) ctx.moveTo(px, y0 + sag);
+            else ctx.lineTo(px, y0 + sag);
+          }
+          ctx.stroke();
+        }
+      }
+      if (theme === 'rooftop') {
+        // 風：橫向速度線
+        ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+        ctx.lineWidth = 1.5;
+        for (let i = 0; i < 5; i++) {
+          const y = (elapsed * 90 + i * 137) % h;
+          const x = w - ((elapsed * 600 + i * 450) % (w + 300));
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineTo(x + 160, y);
+          ctx.stroke();
+        }
+      }
+      // 暈影
+      const v = ctx.createRadialGradient(w / 2, h / 2, h * 0.45, w / 2, h / 2, h * 0.95);
+      v.addColorStop(0, 'rgba(0,0,0,0)');
+      v.addColorStop(1, 'rgba(0,0,0,0.4)');
+      ctx.fillStyle = v;
+      ctx.fillRect(0, 0, w, h);
     },
   };
+  return env;
+}
+
+function shade(hexColor: string, amt: number): string {
+  const n = parseInt(hexColor.slice(1), 16);
+  const r = Math.max(0, Math.min(255, (n >> 16) + amt));
+  const g = Math.max(0, Math.min(255, ((n >> 8) & 0xff) + amt));
+  const b = Math.max(0, Math.min(255, (n & 0xff) + amt));
+  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
+}
+
+const NEON_PALETTE = ['#ff4d6d', '#00d4ff', '#ffd23f', '#7b2fff', '#3ddc97'];
+
+/** 中景道具：bx/by = 道具世界 x 於 z=0 的螢幕座標，m = px/公尺 */
+function drawProp(ctx: CanvasRenderingContext2D, p: Prop, bx: number, by: number, m: number, t: number): void {
+  ctx.save();
+  ctx.translate(bx, by);
+  const v = p.variant;
+  switch (p.kind) {
+    case 'storefront': {
+      // 騎樓店面 + 直式霓虹招牌
+      const sw = m * 4.6, sh = m * 3.4;
+      ctx.fillStyle = shade('#2c2438', Math.floor(v * 24) - 12);
+      ctx.fillRect(-sw / 2, -sh, sw, sh);
+      ctx.strokeStyle = '#15120f';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(-sw / 2, -sh, sw, sh);
+      // 騎樓柱
+      ctx.fillStyle = '#241e30';
+      ctx.fillRect(-sw / 2, -sh, m * 0.32, sh);
+      ctx.fillRect(sw / 2 - m * 0.32, -sh, m * 0.32, sh);
+      // 店口燈光
+      ctx.fillStyle = `rgba(255, 226, 150, ${0.16 + v * 0.12})`;
+      ctx.fillRect(-sw / 2 + m * 0.4, -sh * 0.62, sw - m * 0.8, sh * 0.62);
+      // 直式霓虹招牌
+      if (p.text) {
+        const neon = NEON_PALETTE[Math.floor(v * NEON_PALETTE.length)];
+        const flick = Math.sin(t * 7 + v * 40) > -0.85 ? 1 : 0.35;
+        const signW = m * 0.85;
+        const chars = [...p.text].slice(0, 4);
+        const signH = chars.length * m * 0.78 + m * 0.3;
+        const sx = (v - 0.5) * sw * 0.5;
+        ctx.fillStyle = '#181421';
+        ctx.fillRect(sx - signW / 2, -sh - signH, signW, signH);
+        ctx.strokeStyle = neon;
+        ctx.globalAlpha = flick;
+        ctx.lineWidth = 2.5;
+        ctx.strokeRect(sx - signW / 2, -sh - signH, signW, signH);
+        ctx.fillStyle = neon;
+        ctx.font = `900 ${m * 0.62}px 'Noto Sans TC', sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.shadowColor = neon;
+        ctx.shadowBlur = 12 * flick;
+        chars.forEach((ch, i) => {
+          ctx.fillText(ch, sx, -sh - signH + m * (0.78 * (i + 1)));
+        });
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+      }
+      break;
+    }
+    case 'stall': {
+      // 夜市攤車：攤台 + 帆布頂 + 招牌 + 燈泡串 + 蒸氣
+      const sw = m * 3.6, sh = m * 2.1;
+      const cols = ['#a33327', '#b8842c', '#356b44', '#7a3b8f'];
+      const cc = cols[Math.floor(v * cols.length)];
+      ctx.fillStyle = '#241c14';
+      ctx.fillRect(-sw / 2, -sh * 0.55, sw, sh * 0.55);
+      ctx.strokeStyle = '#15120f';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(-sw / 2, -sh * 0.55, sw, sh * 0.55);
+      ctx.fillStyle = cc;
+      ctx.beginPath();
+      ctx.moveTo(-sw / 2 - m * 0.3, -sh);
+      ctx.lineTo(sw / 2 + m * 0.3, -sh);
+      ctx.lineTo(sw / 2 + m * 0.15, -sh * 0.72);
+      ctx.lineTo(-sw / 2 - m * 0.15, -sh * 0.72);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      if (p.text) {
+        ctx.fillStyle = '#fff3da';
+        ctx.font = `900 ${m * 0.42}px 'Noto Sans TC', sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.fillText(p.text.slice(0, 5), 0, -sh * 0.8);
+      }
+      for (let i = -1; i <= 1; i++) {
+        const lx = i * sw * 0.3;
+        const sway = Math.sin(t * 2 + v * 10 + i) * 2;
+        ctx.fillStyle = '#ffdd88';
+        ctx.shadowColor = '#ffbb44';
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.arc(lx + sway, -sh * 0.66, m * 0.09, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+      ctx.fillStyle = 'rgba(255,255,255,0.12)';
+      const sy = (t * 30 + v * 100) % 40;
+      ctx.beginPath();
+      ctx.arc((v - 0.5) * sw * 0.5, -sh * 0.6 - sy, m * (0.18 + sy / 90), 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
+    case 'lanternString': {
+      for (let i = -2; i <= 2; i++) {
+        const lx = i * m * 1.1;
+        const sway = Math.sin(t * 1.8 + v * 20 + i * 0.7) * 3;
+        ctx.fillStyle = '#cf2f2f';
+        ctx.shadowColor = '#ff5533';
+        ctx.shadowBlur = 14;
+        ctx.beginPath();
+        ctx.ellipse(lx + sway, -m * 3.1, m * 0.22, m * 0.27, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#e8b84a';
+        ctx.fillRect(lx + sway - m * 0.06, -m * 3.45, m * 0.12, m * 0.08);
+      }
+      break;
+    }
+    case 'lantern': {
+      const sway = Math.sin(t * 1.6 + v * 30) * 3;
+      ctx.strokeStyle = '#15120f';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(0, -m * 3.6);
+      ctx.lineTo(sway, -m * 3.1);
+      ctx.stroke();
+      ctx.fillStyle = '#cf2f2f';
+      ctx.shadowColor = '#ff6644';
+      ctx.shadowBlur = 16;
+      ctx.beginPath();
+      ctx.ellipse(sway, -m * 2.75, m * 0.3, m * 0.36, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = '#7a1d1d';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(sway - m * 0.28, -m * 2.75);
+      ctx.lineTo(sway + m * 0.28, -m * 2.75);
+      ctx.stroke();
+      break;
+    }
+    case 'pillar': {
+      ctx.fillStyle = '#8f2b22';
+      ctx.fillRect(-m * 0.22, -m * 3.6, m * 0.44, m * 3.6);
+      ctx.strokeStyle = '#15120f';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(-m * 0.22, -m * 3.6, m * 0.44, m * 3.6);
+      ctx.fillStyle = '#b8842c';
+      ctx.fillRect(-m * 0.3, -m * 3.75, m * 0.6, m * 0.18);
+      break;
+    }
+    case 'scooter': {
+      // 路邊機車（台灣街景靈魂）
+      const c = ['#4a6b8a', '#7a4a52', '#5a7a4a', '#888888'][Math.floor(v * 4)];
+      ctx.scale(v > 0.5 ? 1 : -1, 1);
+      ctx.fillStyle = '#15120f';
+      ctx.beginPath();
+      ctx.arc(-m * 0.45, -m * 0.18, m * 0.18, 0, Math.PI * 2);
+      ctx.arc(m * 0.45, -m * 0.18, m * 0.18, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = c;
+      ctx.beginPath();
+      ctx.moveTo(-m * 0.5, -m * 0.35);
+      ctx.quadraticCurveTo(0, -m * 0.2, m * 0.3, -m * 0.4);
+      ctx.lineTo(m * 0.55, -m * 0.75);
+      ctx.lineTo(m * 0.62, -m * 0.4);
+      ctx.lineTo(m * 0.5, -m * 0.3);
+      ctx.quadraticCurveTo(0, -m * 0.05, -m * 0.45, -m * 0.2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#15120f';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+      ctx.fillStyle = '#222222';
+      ctx.fillRect(-m * 0.42, -m * 0.62, m * 0.5, m * 0.14);
+      break;
+    }
+    case 'lamp': {
+      ctx.fillStyle = '#3a3f4a';
+      ctx.fillRect(-m * 0.07, -m * 3.8, m * 0.14, m * 3.8);
+      ctx.strokeStyle = '#15120f';
+      ctx.lineWidth = 2.5;
+      ctx.strokeRect(-m * 0.07, -m * 3.8, m * 0.14, m * 3.8);
+      ctx.fillStyle = '#ffe9b0';
+      ctx.shadowColor = '#ffd980';
+      ctx.shadowBlur = 18;
+      ctx.beginPath();
+      ctx.ellipse(m * 0.32, -m * 3.75, m * 0.26, m * 0.13, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      break;
+    }
+    case 'glasspanel': {
+      const gw = m * 5, gh = m * 3.8;
+      const grad = ctx.createLinearGradient(-gw / 2, -gh, gw / 2, 0);
+      grad.addColorStop(0, '#16263e');
+      grad.addColorStop(0.5, '#1f3858');
+      grad.addColorStop(1, '#14223a');
+      ctx.fillStyle = grad;
+      ctx.fillRect(-gw / 2, -gh, gw, gh);
+      ctx.strokeStyle = '#15120f';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(-gw / 2, -gh, gw, gh);
+      ctx.strokeStyle = 'rgba(140,190,240,0.25)';
+      ctx.lineWidth = 1.5;
+      for (let i = 1; i < 4; i++) {
+        ctx.beginPath();
+        ctx.moveTo(-gw / 2 + (gw / 4) * i, -gh);
+        ctx.lineTo(-gw / 2 + (gw / 4) * i, 0);
+        ctx.stroke();
+      }
+      break;
+    }
+    case 'billboard': {
+      const bw = m * 2.6, bh = m * 1.5;
+      const cycle = Math.floor(t / 2 + v * 5) % 2 === 0;
+      ctx.fillStyle = '#0c0f16';
+      ctx.fillRect(-bw / 2, -m * 3.4 - bh, bw, bh);
+      ctx.strokeStyle = '#15120f';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(-bw / 2, -m * 3.4 - bh, bw, bh);
+      ctx.fillStyle = cycle ? '#00d4ff' : '#ff4d6d';
+      ctx.globalAlpha = 0.85;
+      ctx.font = `900 ${m * 0.6}px 'Noto Sans TC', sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.fillText(p.text ?? 'SALE', 0, -m * 3.4 - bh * 0.32);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = '#3a3f4a';
+      ctx.fillRect(-m * 0.08, -m * 3.4, m * 0.16, m * 3.4);
+      break;
+    }
+    case 'vent': {
+      ctx.fillStyle = '#2e3138';
+      ctx.fillRect(-m * 0.9, -m * 1.1, m * 1.8, m * 1.1);
+      ctx.strokeStyle = '#15120f';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(-m * 0.9, -m * 1.1, m * 1.8, m * 1.1);
+      ctx.strokeStyle = '#1c1e24';
+      ctx.lineWidth = 2;
+      for (let i = 1; i < 5; i++) {
+        ctx.beginPath();
+        ctx.moveTo(-m * 0.85, -m * 1.1 + (m * 1.05 / 5) * i);
+        ctx.lineTo(m * 0.85, -m * 1.1 + (m * 1.05 / 5) * i);
+        ctx.stroke();
+      }
+      break;
+    }
+    case 'beacon': {
+      const pulse = (Math.sin(t * 2.5 + v * 10) + 1) / 2;
+      ctx.fillStyle = '#3a3f4a';
+      ctx.fillRect(-m * 0.05, -m * 1.6, m * 0.1, m * 1.6);
+      ctx.fillStyle = `rgba(255, 60, 60, ${0.4 + pulse * 0.6})`;
+      ctx.shadowColor = '#ff3030';
+      ctx.shadowBlur = 18 * pulse;
+      ctx.beginPath();
+      ctx.arc(0, -m * 1.7, m * 0.12, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      break;
+    }
+  }
+  ctx.restore();
+}
+
+/** 龍山寺香爐（protect 目標） */
+function drawBurner(ctx: CanvasRenderingContext2D, bx: number, by: number, m: number, t: number): void {
+  ctx.save();
+  ctx.translate(bx, by);
+  ctx.strokeStyle = '#15120f';
+  ctx.lineWidth = 3.5;
+  for (const lx of [-m * 0.4, m * 0.4]) {
+    ctx.fillStyle = '#665827';
+    ctx.fillRect(lx - m * 0.07, -m * 0.4, m * 0.14, m * 0.4);
+  }
+  ctx.fillStyle = '#7a6a35';
+  ctx.beginPath();
+  ctx.ellipse(0, -m * 0.75, m * 0.66, m * 0.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = '#665827';
+  ctx.beginPath();
+  ctx.ellipse(0, -m * 1.18, m * 0.6, m * 0.16, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  // 香 + 火點 + 裊裊煙
+  for (const ix of [-m * 0.18, 0, m * 0.18]) {
+    ctx.strokeStyle = '#8f2b22';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(ix, -m * 1.2);
+    ctx.lineTo(ix * 1.3, -m * 1.7);
+    ctx.stroke();
+    ctx.fillStyle = '#ff8844';
+    ctx.beginPath();
+    ctx.arc(ix * 1.3, -m * 1.72, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.fillStyle = 'rgba(230,230,230,0.14)';
+  for (let i = 0; i < 3; i++) {
+    const sy = (t * 22 + i * 33) % 70;
+    ctx.beginPath();
+    ctx.arc(Math.sin(t * 1.5 + i * 2) * 6, -m * 1.8 - sy, 4 + sy / 9, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+/** 101 頂樓直升機坪 */
+function drawHelipad(ctx: CanvasRenderingContext2D, cam: GameCamera, length: number): void {
+  const c = cam.worldToScreen(new Vec3(length * 0.75, 0, DEPTH / 2));
+  const rx = cam.ppm * 4.4;
+  const ry = cam.ppm * 1.5;
+  ctx.strokeStyle = 'rgba(255,210,63,0.5)';
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.ellipse(c.x, c.y, rx, ry, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.font = `900 ${cam.ppm * 1.8}px 'Noto Sans TC', sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = 'rgba(255,210,63,0.45)';
+  ctx.fillText('H', c.x, c.y);
+  ctx.textBaseline = 'alphabetic';
 }

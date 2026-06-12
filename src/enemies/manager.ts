@@ -1,4 +1,5 @@
-import * as THREE from 'three';
+import { Vec3 } from '../core/vec';
+import type { GameCamera } from '../core/camera';
 import { Enemy, type PlayerTarget, type EnemyHost } from './enemy';
 import type { Hittable, HitQuery } from '../combat/damage';
 import { inArc } from '../combat/damage';
@@ -8,28 +9,23 @@ import { bus } from '../core/events';
 const MAX_ATTACK_TOKENS = 2; // 同時出手的敵人上限（經典 beat 'em up 規則）
 
 interface Bottle {
-  mesh: THREE.Mesh;
-  from: THREE.Vector3;
-  to: THREE.Vector3;
+  pos: Vec3;
+  from: Vec3;
+  to: Vec3;
   t: number;
   damage: number;
+  spin: number;
 }
 
 export class EnemyManager implements HitQuery, EnemyHost {
   private enemies: Enemy[] = [];
   private tokens = new Set<Enemy>();
   private bottles: Bottle[] = [];
-  private bottleGeo = new THREE.CylinderGeometry(0.06, 0.08, 0.3, 6);
-  private bottleMat = new THREE.MeshStandardMaterial({ color: 0x77aa55, transparent: true, opacity: 0.9 });
 
-  constructor(
-    private scene: THREE.Scene,
-    private player: PlayerTarget,
-  ) {}
+  constructor(private player: PlayerTarget) {}
 
-  spawn(def: EnemyDef, pos: THREE.Vector3): Enemy {
+  spawn(def: EnemyDef, pos: Vec3): Enemy {
     const e = new Enemy(def, pos, this.player, this);
-    this.scene.add(e.visual.root);
     this.enemies.push(e);
     bus.emit('enemy:spawned', { defId: def.id });
     return e;
@@ -45,15 +41,15 @@ export class EnemyManager implements HitQuery, EnemyHost {
 
   update(dt: number): void {
     for (const e of this.enemies) e.update(dt);
-    this.applySeparation(dt);
+    this.applySeparation();
     this.updateBottles(dt);
     // 清理權杖（死亡者釋放）
     for (const e of [...this.tokens]) if (!e.isAlive()) this.tokens.delete(e);
   }
 
   /** 敵人彼此推開，避免疊在一起 */
-  private separationVec = new THREE.Vector3();
-  private applySeparation(dt: number): void {
+  private separationVec = new Vec3();
+  private applySeparation(): void {
     const alive = this.enemies.filter((e) => e.isAlive());
     for (let i = 0; i < alive.length; i++) {
       for (let j = i + 1; j < alive.length; j++) {
@@ -84,41 +80,63 @@ export class EnemyManager implements HitQuery, EnemyHost {
     this.tokens.delete(e);
   }
 
-  spawnProjectile(from: THREE.Vector3, target: THREE.Vector3, damage: number): void {
-    const mesh = new THREE.Mesh(this.bottleGeo, this.bottleMat);
-    mesh.position.copy(from);
-    this.scene.add(mesh);
-    this.bottles.push({ mesh, from: from.clone(), to: target.clone().setY(1), t: 0, damage });
+  spawnProjectile(from: Vec3, target: Vec3, damage: number): void {
+    this.bottles.push({
+      pos: from.clone(),
+      from: from.clone(),
+      to: target.clone().setY(1),
+      t: 0,
+      damage,
+      spin: 0,
+    });
   }
 
   private updateBottles(dt: number): void {
     for (let i = this.bottles.length - 1; i >= 0; i--) {
       const b = this.bottles[i];
       b.t += dt / 0.9; // 飛行 0.9 秒
+      b.spin += dt * 12;
       if (b.t >= 1) {
         // 落地：命中判定
         if (this.player.isAlive && this.player.position.distanceTo(b.to) < 1.3) {
           this.player.takeDamage(b.damage, b.from);
         }
-        this.scene.remove(b.mesh);
         this.bottles.splice(i, 1);
         continue;
       }
-      b.mesh.position.lerpVectors(b.from, b.to, b.t);
-      b.mesh.position.y += Math.sin(b.t * Math.PI) * 2.2; // 拋物線
-      b.mesh.rotation.x += dt * 12;
+      b.pos.lerpVectors(b.from, b.to, b.t);
+      b.pos.y += Math.sin(b.t * Math.PI) * 2.2; // 拋物線
+    }
+  }
+
+  /** 投擲物繪製（實體層之後呼叫） */
+  drawProjectiles(ctx: CanvasRenderingContext2D, cam: GameCamera): void {
+    for (const b of this.bottles) {
+      const s = cam.worldToScreen(b.pos);
+      const k = cam.ppm * s.scale;
+      ctx.save();
+      ctx.translate(s.x, s.y);
+      ctx.rotate(b.spin);
+      ctx.fillStyle = '#77aa55';
+      ctx.strokeStyle = '#15120f';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(-k * 0.05, -k * 0.16, k * 0.1, k * 0.32, k * 0.04);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
     }
   }
 
   // ───────── HitQuery（玩家攻擊查詢） ─────────
 
-  queryArc(pos: THREE.Vector3, facingRad: number, range: number, arcDeg: number): Hittable[] {
+  queryArc(pos: Vec3, facingRad: number, range: number, arcDeg: number): Hittable[] {
     return this.enemies.filter(
       (e) => e.isAlive() && inArc(pos, facingRad, range + e.def.scale * 0.3, arcDeg, e.position),
     );
   }
 
-  queryRadius(pos: THREE.Vector3, radius: number): Hittable[] {
+  queryRadius(pos: Vec3, radius: number): Hittable[] {
     return this.enemies.filter((e) => e.isAlive() && e.position.distanceTo(pos) <= radius);
   }
 
@@ -127,7 +145,6 @@ export class EnemyManager implements HitQuery, EnemyHost {
     for (const e of this.enemies) e.dispose();
     this.enemies = [];
     this.tokens.clear();
-    for (const b of this.bottles) this.scene.remove(b.mesh);
     this.bottles = [];
   }
 }

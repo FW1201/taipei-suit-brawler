@@ -1,15 +1,15 @@
-import * as THREE from 'three';
+import { Vec3 } from '../core/vec';
 
 /** 可被打的目標（敵人實作此介面；避免 player ↔ enemies 循環依賴） */
 export interface Hittable {
-  readonly position: THREE.Vector3;
+  readonly position: Vec3;
   isAlive(): boolean;
   /** @returns 實際是否命中（被格擋回傳 false） */
   takeHit(damage: number, opts: HitOptions): boolean;
 }
 
 export interface HitOptions {
-  fromPos: THREE.Vector3;
+  fromPos: Vec3;
   knockback: number;       // 擊退距離 m
   breaksBlock?: boolean;   // 重拳/三段拳可破格擋
   knockdown?: boolean;     // 擊倒
@@ -18,15 +18,15 @@ export interface HitOptions {
 
 export interface HitQuery {
   /** 取得攻擊者面向扇形範圍內的所有目標 */
-  queryArc(pos: THREE.Vector3, facingRad: number, range: number, arcDeg: number): Hittable[];
+  queryArc(pos: Vec3, facingRad: number, range: number, arcDeg: number): Hittable[];
   /** 取得半徑內所有目標（必殺 AOE 用） */
-  queryRadius(pos: THREE.Vector3, radius: number): Hittable[];
+  queryRadius(pos: Vec3, radius: number): Hittable[];
 }
 
-const _toTarget = new THREE.Vector3();
+const _toTarget = new Vec3();
 
 /** pos 面向 facing，target 是否在 range/arc 內 */
-export function inArc(pos: THREE.Vector3, facingRad: number, range: number, arcDeg: number, target: THREE.Vector3): boolean {
+export function inArc(pos: Vec3, facingRad: number, range: number, arcDeg: number, target: Vec3): boolean {
   _toTarget.copy(target).sub(pos);
   _toTarget.y = 0;
   const dist = _toTarget.length();

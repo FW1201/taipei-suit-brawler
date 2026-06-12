@@ -1,6 +1,5 @@
-import * as THREE from 'three';
-import type { ICharacterVisual } from './visual';
-import { createCharacterVisual } from './visual-glb';
+import { Vec3 } from '../core/vec';
+import { createCharacterVisual, type ICharacterVisual } from './visual';
 import type { HitQuery } from './damage';
 import type { PlayerStats } from '../types';
 import { bus } from '../core/events';
@@ -23,8 +22,8 @@ const DODGE_DURATION = 0.42;
 const COMBO_QUEUE_WINDOW = 0.5;  // 收招後可接下一段的窗口
 
 export class PlayerController {
-  readonly position = new THREE.Vector3();
-  facing = 0; // 弧度，0 = +z
+  readonly position = new Vec3();
+  facing = Math.PI / 2; // 弧度：x-z 平面方位角，π/2 = 面向 +x（右）
   readonly visual: ICharacterVisual;
 
   hp: number;
@@ -40,7 +39,7 @@ export class PlayerController {
   private hitApplied = false;
   private iFramesUntil = -1;      // elapsed 時間軸上的無敵截止
   private counterUntil = -1;      // 閃避後反擊加成窗口
-  private dodgeDir = new THREE.Vector3();
+  private dodgeDir = new Vec3();
   private elapsed = 0;
   private downTimer = 0;
 
@@ -57,6 +56,8 @@ export class PlayerController {
       tieColor: 0xff6b35,       // 橘領帶（Neon Circuit accent）
       sunglasses: true,
       isHero: true,
+      spriteId: 'hero',         // AI sprite sheet 到位後自動啟用
+
       onFootstep: () => { if (this.state === 'free') playSound('footstep'); },
     });
   }
@@ -73,7 +74,7 @@ export class PlayerController {
     return this.elapsed < this.iFramesUntil || this.state === 'downed' || this.state === 'dead';
   }
 
-  resetForLevel(spawnPos: THREE.Vector3, revives = 2): void {
+  resetForLevel(spawnPos: Vec3, revives = 2): void {
     this.position.copy(spawnPos);
     this.hp = this.stats.maxHp;
     this.rage = 0;
@@ -86,7 +87,7 @@ export class PlayerController {
     bus.emit('player:rage', { rage: 0 });
   }
 
-  update(dt: number, camera: THREE.Camera): void {
+  update(dt: number): void {
     this.elapsed += dt;
     this.stateTime += dt;
 
@@ -100,7 +101,7 @@ export class PlayerController {
     }
 
     switch (this.state) {
-      case 'free': this.updateFree(dt, camera); break;
+      case 'free': this.updateFree(dt); break;
       case 'attack': this.updateAttack(dt); break;
       case 'dodge': this.updateDodge(dt); break;
       case 'hit':
@@ -123,26 +124,21 @@ export class PlayerController {
 
   // ───────── 狀態邏輯 ─────────
 
-  private moveVec = new THREE.Vector3();
-  private camFwd = new THREE.Vector3();
-  private camRight = new THREE.Vector3();
+  private moveVec = new Vec3();
 
-  private readMoveInput(camera: THREE.Camera): THREE.Vector3 {
-    camera.getWorldDirection(this.camFwd);
-    this.camFwd.y = 0;
-    this.camFwd.normalize();
-    this.camRight.crossVectors(this.camFwd, new THREE.Vector3(0, 1, 0)).negate();
+  /** 橫向捲軸輸入：A/D = 左右（x），W/S = 縱深（z，W 朝畫面上方 = z 減少） */
+  private readMoveInput(): Vec3 {
     this.moveVec.set(0, 0, 0);
-    if (input.isDown('w')) this.moveVec.add(this.camFwd);
-    if (input.isDown('s')) this.moveVec.sub(this.camFwd);
-    if (input.isDown('a')) this.moveVec.sub(this.camRight);
-    if (input.isDown('d')) this.moveVec.add(this.camRight);
+    if (input.isDown('w')) this.moveVec.z -= 1;
+    if (input.isDown('s')) this.moveVec.z += 1;
+    if (input.isDown('a')) this.moveVec.x -= 1;
+    if (input.isDown('d')) this.moveVec.x += 1;
     if (this.moveVec.lengthSq() > 0) this.moveVec.normalize();
     return this.moveVec;
   }
 
-  private updateFree(dt: number, camera: THREE.Camera): void {
-    const move = this.readMoveInput(camera);
+  private updateFree(dt: number): void {
+    const move = this.readMoveInput();
     const moving = move.lengthSq() > 0;
 
     if (moving) {
@@ -244,7 +240,7 @@ export class PlayerController {
     }
   }
 
-  private startDodge(dir: THREE.Vector3): void {
+  private startDodge(dir: Vec3): void {
     this.state = 'dodge';
     this.stateTime = 0;
     this.dodgeDir.copy(dir);
@@ -308,7 +304,7 @@ export class PlayerController {
   /** 出拳時自動轉向最近的敵人 */
   private autoFace(): void {
     const nearby = this.hitQuery.queryRadius(this.position, 3.2);
-    let best: THREE.Vector3 | null = null;
+    let best: Vec3 | null = null;
     let bestDist = Infinity;
     for (const t of nearby) {
       const d = t.position.distanceToSquared(this.position);
@@ -325,7 +321,7 @@ export class PlayerController {
   }
 
   /** 敵人呼叫：對玩家造成傷害 */
-  takeDamage(amount: number, fromPos: THREE.Vector3): void {
+  takeDamage(amount: number, fromPos: Vec3): void {
     if (!this.isAlive || this.isInvulnerable || this.state === 'dodge') return;
     const final = Math.max(1, Math.round(amount * (1 - this.stats.damageReduction)));
     this.hp -= final;

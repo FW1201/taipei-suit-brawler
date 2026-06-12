@@ -1,6 +1,5 @@
-import * as THREE from 'three';
-import type { ICharacterVisual } from '../combat/visual';
-import { createCharacterVisual } from '../combat/visual-glb';
+import { Vec3 } from '../core/vec';
+import { createCharacterVisual, type ICharacterVisual } from '../combat/visual';
 import type { Hittable, HitOptions } from '../combat/damage';
 import { inArc } from '../combat/damage';
 import type { EnemyDef } from '../types';
@@ -8,9 +7,9 @@ import { bus } from '../core/events';
 import { playSound } from '../core/audio';
 
 export interface PlayerTarget {
-  readonly position: THREE.Vector3;
+  readonly position: Vec3;
   readonly isAlive: boolean;
-  takeDamage(amount: number, fromPos: THREE.Vector3): void;
+  takeDamage(amount: number, fromPos: Vec3): void;
 }
 
 export interface EnemyHost {
@@ -18,7 +17,7 @@ export interface EnemyHost {
   requestAttackToken(e: Enemy): boolean;
   releaseAttackToken(e: Enemy): void;
   /** 投擲手丟瓶 */
-  spawnProjectile(from: THREE.Vector3, target: THREE.Vector3, damage: number): void;
+  spawnProjectile(from: Vec3, target: Vec3, damage: number): void;
 }
 
 type EnemyState = 'idle' | 'chase' | 'strafe' | 'windup' | 'attack' | 'stagger' | 'knocked' | 'dead';
@@ -29,7 +28,7 @@ const STAGGER_TIME = 0.35;
 const KNOCKED_TIME = 1.4;
 
 export class Enemy implements Hittable {
-  readonly position = new THREE.Vector3();
+  readonly position = new Vec3();
   readonly visual: ICharacterVisual;
   readonly def: EnemyDef;
 
@@ -49,7 +48,7 @@ export class Enemy implements Hittable {
 
   constructor(
     def: EnemyDef,
-    spawnPos: THREE.Vector3,
+    spawnPos: Vec3,
     private player: PlayerTarget,
     private host: EnemyHost,
   ) {
@@ -62,6 +61,7 @@ export class Enemy implements Hittable {
       sunglasses: def.kind === 'bodyguard' || def.kind === 'boss',
       scale: def.scale,
       tieColor: def.kind === 'boss' ? 0xd4af37 : undefined,
+      spriteId: def.id, // AI sprite sheet（sprites.json 以敵種 id 為 key）到位後自動啟用
     });
   }
 
@@ -118,7 +118,7 @@ export class Enemy implements Hittable {
     const toPlayer = this.player.position.clone().sub(this.position);
     toPlayer.y = 0;
     const dist = toPlayer.length();
-    const dir = dist > 0.001 ? toPlayer.clone().normalize() : new THREE.Vector3(0, 0, 1);
+    const dir = dist > 0.001 ? toPlayer.clone().normalize() : new Vec3(0, 0, 1);
     this.facing = Math.atan2(dir.x, dir.z);
 
     const isRanged = !!this.def.projectile;
@@ -166,7 +166,7 @@ export class Enemy implements Hittable {
           this.strafeTimer = 1 + Math.random() * 1.5;
           this.strafeDir = Math.random() > 0.5 ? 1 : -1;
         }
-        const tangent = new THREE.Vector3(-dir.z, 0, dir.x).multiplyScalar(this.strafeDir);
+        const tangent = new Vec3(-dir.z, 0, dir.x).multiplyScalar(this.strafeDir);
         this.position.addScaledVector(tangent, this.speed * 0.45 * dt);
         // 維持包圍距離
         if (dist > desiredRange + 1.5) this.position.addScaledVector(dir, this.speed * 0.5 * dt);

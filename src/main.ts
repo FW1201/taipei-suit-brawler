@@ -2,9 +2,11 @@
 // title → map → level → result → shop → map …
 
 import { Engine } from './core/engine';
+import { GameCamera } from './core/camera';
 import { bus } from './core/events';
 import { initAudio, playSound } from './core/audio';
 import { MANIFEST } from './core/manifest';
+import { loadSprites } from './core/sprites';
 import { defaultSave, loadSave, writeSave } from './core/save';
 import { computePlayerStats } from './systems/stats';
 import { LevelRunner } from './levels/level';
@@ -28,7 +30,7 @@ class Game {
   constructor() {
     this.save = loadSave() ?? defaultSave();
     initAudio(MANIFEST.audio);
-    // 角色採程式化西裝人（主題正確且零載入）；GLB 角色管線保留於 visual-glb.ts
+    void loadSprites(); // AI sprite sheet（有素材自動切換，無素材用程式化角色）
     this.wireHud();
     this.engine.start();
     this.showTitle();
@@ -61,20 +63,25 @@ class Game {
     );
   }
 
-  /** 標題/選關背景：旋轉台北夜景 */
+  /** 標題/選關背景：橫向緩慢捲動的西門町夜景 */
   private backdropOff: (() => void) | null = null;
   private buildBackdrop(): void {
     this.teardownLevel();
     this.engine.clearScene();
-    // 重用 builder 的西門町主題當背景
     void import('./levels/builder').then(({ buildEnvironment }) => {
-      const env = buildEnvironment(this.engine.scene, 'neon');
+      const LEN = 80;
+      const env = buildEnvironment('neon', LEN);
+      const cam = new GameCamera();
+      cam.setLevelBounds(0, LEN);
       let t = 0;
       this.backdropOff = this.engine.onUpdate((dt) => {
         t += dt;
-        env.update(dt, t);
-        this.engine.camera.position.set(Math.sin(t * 0.1) * 22, 9, Math.cos(t * 0.1) * 22);
-        this.engine.camera.lookAt(0, 3, 0);
+        cam.update(LEN / 2 + Math.sin(t * 0.06) * (LEN / 2 - 12), dt);
+      });
+      this.engine.setDraw((ctx, w, h) => {
+        cam.viewport(w, h);
+        env.drawBackground(ctx, cam, w, h, t);
+        env.drawForeground(ctx, cam, w, h, t);
       });
     });
   }

@@ -61,7 +61,7 @@ export function createTitle(): TitleAPI {
       const credits = el(
         'div',
         '',
-        '素材：Kenney.nl（CC0）・Quaternius（CC0）・"White Taipei 101" by Elaine Wijaya Oey（CC-BY 3.0）',
+        '音效：Kenney.nl（CC0）・視覺：程式化繪製 + AI 生成素材',
       );
       credits.style.cssText = 'font-size:10px;color:#5a6470;margin-top:14px;letter-spacing:0.05em;';
 

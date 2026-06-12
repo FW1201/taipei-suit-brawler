@@ -7,10 +7,26 @@
     "bossId": "boss_ximen",
     "envTheme": "neon",
     "waves": [
-      { "spawns": { "punk": 4 }, "trigger": 0 },
-      { "spawns": { "punk": 5 }, "trigger": "clear" },
-      { "spawns": { "punk": 6 }, "trigger": "clear" }
-    ]
+      {
+        "spawns": {
+          "punk": 4
+        },
+        "trigger": 0
+      },
+      {
+        "spawns": {
+          "punk": 5
+        },
+        "trigger": "clear"
+      },
+      {
+        "spawns": {
+          "punk": 6
+        },
+        "trigger": "clear"
+      }
+    ],
+    "length": 55
   },
   {
     "id": 2,
@@ -20,11 +36,36 @@
     "bossId": "boss_shilin",
     "envTheme": "nightmarket",
     "waves": [
-      { "spawns": { "punk": 4, "knifer": 2 }, "trigger": 0 },
-      { "spawns": { "punk": 5, "knifer": 3 }, "trigger": 1 },
-      { "spawns": { "punk": 4, "knifer": 4 }, "trigger": 2 },
-      { "spawns": { "punk": 2, "knifer": 2 }, "trigger": "clear" }
-    ]
+      {
+        "spawns": {
+          "punk": 4,
+          "knifer": 2
+        },
+        "trigger": 0
+      },
+      {
+        "spawns": {
+          "punk": 5,
+          "knifer": 3
+        },
+        "trigger": 1
+      },
+      {
+        "spawns": {
+          "punk": 4,
+          "knifer": 4
+        },
+        "trigger": 2
+      },
+      {
+        "spawns": {
+          "punk": 2,
+          "knifer": 2
+        },
+        "trigger": "clear"
+      }
+    ],
+    "length": 65
   },
   {
     "id": 3,
@@ -34,10 +75,31 @@
     "bossId": "boss_longshan",
     "envTheme": "temple",
     "waves": [
-      { "spawns": { "punk": 5, "knifer": 2 }, "trigger": 0 },
-      { "spawns": { "punk": 4, "bruiser": 1, "knifer": 2 }, "trigger": "clear" },
-      { "spawns": { "bruiser": 2, "knifer": 3, "berserker": 1 }, "trigger": "clear" }
-    ]
+      {
+        "spawns": {
+          "punk": 5,
+          "knifer": 2
+        },
+        "trigger": 0
+      },
+      {
+        "spawns": {
+          "punk": 4,
+          "bruiser": 1,
+          "knifer": 2
+        },
+        "trigger": "clear"
+      },
+      {
+        "spawns": {
+          "bruiser": 2,
+          "knifer": 3,
+          "berserker": 1
+        },
+        "trigger": "clear"
+      }
+    ],
+    "length": 60
   },
   {
     "id": 4,
@@ -47,11 +109,39 @@
     "bossId": "boss_xinyi",
     "envTheme": "skybridge",
     "waves": [
-      { "spawns": { "bodyguard": 3, "punk": 3 }, "trigger": 0 },
-      { "spawns": { "bodyguard": 2, "thrower": 2, "knifer": 2 }, "trigger": 1 },
-      { "spawns": { "bodyguard": 3, "thrower": 1, "bruiser": 1 }, "trigger": "clear" },
-      { "spawns": { "bodyguard": 4, "knifer": 3, "berserker": 1 }, "trigger": "clear" }
-    ]
+      {
+        "spawns": {
+          "bodyguard": 3,
+          "punk": 3
+        },
+        "trigger": 0
+      },
+      {
+        "spawns": {
+          "bodyguard": 2,
+          "thrower": 2,
+          "knifer": 2
+        },
+        "trigger": 1
+      },
+      {
+        "spawns": {
+          "bodyguard": 3,
+          "thrower": 1,
+          "bruiser": 1
+        },
+        "trigger": "clear"
+      },
+      {
+        "spawns": {
+          "bodyguard": 4,
+          "knifer": 3,
+          "berserker": 1
+        },
+        "trigger": "clear"
+      }
+    ],
+    "length": 70
   },
   {
     "id": 5,
@@ -61,10 +151,40 @@
     "bossId": "boss_101",
     "envTheme": "rooftop",
     "waves": [
-      { "spawns": { "bodyguard": 2, "knifer": 2, "bruiser": 1 }, "trigger": 0 },
-      { "spawns": { "punk": 3, "knifer": 2, "thrower": 2 }, "trigger": "clear" },
-      { "spawns": { "bodyguard": 2, "bruiser": 2, "berserker": 2 }, "trigger": "clear" },
-      { "spawns": { "berserker": 3, "knifer": 2, "thrower": 2, "bodyguard": 2 }, "trigger": "clear" }
-    ]
+      {
+        "spawns": {
+          "bodyguard": 2,
+          "knifer": 2,
+          "bruiser": 1
+        },
+        "trigger": 0
+      },
+      {
+        "spawns": {
+          "punk": 3,
+          "knifer": 2,
+          "thrower": 2
+        },
+        "trigger": "clear"
+      },
+      {
+        "spawns": {
+          "bodyguard": 2,
+          "bruiser": 2,
+          "berserker": 2
+        },
+        "trigger": "clear"
+      },
+      {
+        "spawns": {
+          "berserker": 3,
+          "knifer": 2,
+          "thrower": 2,
+          "bodyguard": 2
+        },
+        "trigger": "clear"
+      }
+    ],
+    "length": 75
   }
 ]

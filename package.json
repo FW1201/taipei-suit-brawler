@@ -3,17 +3,14 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "西裝正義 Taipei Suit Brawler — 3D beat 'em up set in Taipei, built with Three.js",
+  "description": "西裝正義 Taipei Suit Brawler — 2D beat 'em up set in Taipei, Canvas 2D + TypeScript",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview"
   },
-  "dependencies": {
-    "three": "^0.182.0"
-  },
+  "dependencies": {},
   "devDependencies": {
-    "@types/three": "^0.182.0",
     "typescript": "^5.9.0",
     "vite": "^7.3.0"
   }

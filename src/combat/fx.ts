@@ -1,17 +1,9 @@
-// 戰鬥視覺回饋：浮動傷害數字 + 敵人頭頂血條（DOM overlay，投影自 3D 座標）。
-import * as THREE from 'three';
+// 戰鬥視覺回饋：浮動傷害數字 + 敵人頭頂血條（DOM overlay，投影自 2D 世界座標）。
+import { Vec3 } from '../core/vec';
+import type { GameCamera } from '../core/camera';
 import type { Enemy } from '../enemies/enemy';
 
-const _v = new THREE.Vector3();
-
-function toScreen(pos: THREE.Vector3, camera: THREE.Camera): { x: number; y: number; behind: boolean } {
-  _v.copy(pos).project(camera);
-  return {
-    x: (_v.x * 0.5 + 0.5) * window.innerWidth,
-    y: (-_v.y * 0.5 + 0.5) * window.innerHeight,
-    behind: _v.z > 1,
-  };
-}
+const _v = new Vec3();
 
 export class CombatFX {
   private layer: HTMLDivElement;
@@ -47,9 +39,8 @@ export class CombatFX {
   }
 
   /** 浮動傷害數字 */
-  damageNumber(worldPos: THREE.Vector3, amount: number, isCrit: boolean, camera: THREE.Camera): void {
-    const { x, y, behind } = toScreen(worldPos, camera);
-    if (behind) return;
+  damageNumber(worldPos: Vec3, amount: number, isCrit: boolean, camera: GameCamera): void {
+    const { x, y } = camera.worldToScreen(worldPos);
     const el = document.createElement('div');
     el.className = 'tsb-dmg';
     el.textContent = String(Math.round(amount));
@@ -63,7 +54,7 @@ export class CombatFX {
   }
 
   /** 每幀更新敵人頭頂血條 */
-  updateEnemyBars(enemies: readonly Enemy[], camera: THREE.Camera): void {
+  updateEnemyBars(enemies: readonly Enemy[], camera: GameCamera): void {
     for (const e of enemies) {
       const show = e.isAlive() && e.hp < e.maxHp;
       let bar = this.bars.get(e);
@@ -81,9 +72,8 @@ export class CombatFX {
         continue;
       }
       _v.copy(e.position);
-      _v.y = 2.25 * e.def.scale;
-      const { x, y, behind } = toScreen(_v, camera);
-      if (behind) { bar.style.display = 'none'; continue; }
+      _v.y = 2.15 * e.def.scale;
+      const { x, y } = camera.worldToScreen(_v);
       bar.style.display = 'block';
       bar.style.left = `${x}px`;
       bar.style.top = `${y}px`;

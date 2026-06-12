@@ -1,37 +1,37 @@
-import * as THREE from 'three';
+// Canvas 2D 渲染迴圈核心：update 訂閱 + 單一 draw 進入點 + hitstop 時間縮放。
 import { input } from './input';
 import { timeCtl } from './time';
 
 export type UpdateFn = (dt: number, elapsed: number) => void;
+export type DrawFn = (ctx: CanvasRenderingContext2D, w: number, h: number) => void;
 
-/** 渲染迴圈核心：scene/camera/renderer + update 訂閱 */
 export class Engine {
-  readonly renderer: THREE.WebGLRenderer;
-  readonly scene: THREE.Scene;
-  readonly camera: THREE.PerspectiveCamera;
+  readonly canvas: HTMLCanvasElement;
+  readonly ctx: CanvasRenderingContext2D;
+  width = 0;   // CSS px
+  height = 0;
   private updates = new Set<UpdateFn>();
-  private clock = new THREE.Clock();
+  private drawFn: DrawFn | null = null;
   private running = false;
+  private last = 0;
+  private elapsed = 0;
 
   constructor(container: HTMLElement) {
-    this.renderer = new THREE.WebGLRenderer({ antialias: true });
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    container.appendChild(this.renderer.domElement);
-
-    this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x0d1117);
-
-    this.camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 300);
-    this.camera.position.set(0, 6, 10);
-
-    window.addEventListener('resize', () => {
-      this.camera.aspect = window.innerWidth / window.innerHeight;
-      this.camera.updateProjectionMatrix();
-      this.renderer.setSize(window.innerWidth, window.innerHeight);
-    });
+    this.canvas = document.createElement('canvas');
+    container.appendChild(this.canvas);
+    this.ctx = this.canvas.getContext('2d')!;
+    const resize = () => {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      this.width = window.innerWidth;
+      this.height = window.innerHeight;
+      this.canvas.width = Math.round(this.width * dpr);
+      this.canvas.height = Math.round(this.height * dpr);
+      this.canvas.style.width = `${this.width}px`;
+      this.canvas.style.height = `${this.height}px`;
+      this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // 之後一律以 CSS px 座標繪製
+    };
+    resize();
+    window.addEventListener('resize', resize);
   }
 
   onUpdate(fn: UpdateFn): () => void {
@@ -39,32 +39,39 @@ export class Engine {
     return () => this.updates.delete(fn);
   }
 
+  /** 設定當前畫面的繪製函式（關卡 / 標題背景各自接管） */
+  setDraw(fn: DrawFn | null): void {
+    this.drawFn = fn;
+  }
+
   start(): void {
     if (this.running) return;
     this.running = true;
-    this.clock.start();
-    const loop = () => {
+    this.last = performance.now();
+    const loop = (now: number) => {
       if (!this.running) return;
       requestAnimationFrame(loop);
-      const dt = timeCtl.scale(Math.min(this.clock.getDelta(), 0.05)); // 鎖死最大步長 + hitstop
-      const elapsed = this.clock.getElapsedTime();
-      this.updates.forEach((fn) => fn(dt, elapsed));
+      const raw = Math.min((now - this.last) / 1000, 0.05); // 鎖死最大步長
+      this.last = now;
+      const dt = timeCtl.scale(raw); // hitstop 頓幀
+      this.elapsed += dt;
+      this.updates.forEach((fn) => fn(dt, this.elapsed));
       input.endFrame();
-      this.renderer.render(this.scene, this.camera);
+
+      const ctx = this.ctx;
+      ctx.clearRect(0, 0, this.width, this.height);
+      this.drawFn?.(ctx, this.width, this.height);
     };
-    loop();
+    requestAnimationFrame(loop);
   }
 
   stop(): void {
     this.running = false;
   }
 
-  /** 清空場景（換關用），保留 renderer */
+  /** 換場景：清空所有 update 訂閱與繪製 */
   clearScene(): void {
     this.updates.clear();
-    while (this.scene.children.length) {
-      const child = this.scene.children[0];
-      this.scene.remove(child);
-    }
+    this.drawFn = null;
   }
 }

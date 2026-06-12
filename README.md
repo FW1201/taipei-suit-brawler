@@ -1,6 +1,6 @@
 # 西裝正義 Taipei Suit Brawler
 
-> 西裝暴徒靠雙拳主持正義——以台北為舞台的 3D 清版動作遊戲（beat 'em up）
+> 西裝暴徒靠雙拳主持正義——以台北為舞台的 2D 橫向捲軸清版動作遊戲（beat 'em up，「紫色恐怖」Dad 'n Me 風格）
 
 **🎮 立即遊玩：https://taipei-suit-brawler.vercel.app**
 
@@ -44,11 +44,15 @@
 
 ## 技術架構
 
-- **引擎**：Three.js + TypeScript + Vite（無框架、無物理引擎，自寫輕量碰撞）
-- **角色**：程式化 low-poly 西裝人（雙關節四肢、姿勢混合動畫、墨鏡＋領帶＋口袋巾）
-- **場景**：程式化台北場景 + Kenney City Kit 模型混搭，台北 101 採 CC-BY 模型
+- **引擎**：HTML5 Canvas 2D + TypeScript + Vite（零執行期依賴，bundle 極小）
+- **視覺**：「紫色恐怖」（Dad 'n Me）風格——扁平色塊、粗黑描邊、大頭大拳；
+  程式化向量角色 + AI 生成 sprite sheet 雙軌（素材到位自動切換，`src/core/sprites.ts`）
+- **場景**：三層視差台北街景（騎樓霓虹招牌／夜市攤車燈籠／廟埕／玻璃帷幕／101 頂樓），
+  橫向推進＋鎖屏戰鬥（清完出現「前進 ▶▶」）
 - **音效**：Kenney CC0 音效 + WebAudio 合成 fallback
 - **資料驅動**：敵人／技能／商品／任務／關卡全部 JSON 配置（`src/data/`）
+
+> 3D 版（Three.js）保留於 git tag `v1.0-3d`。
 
 ```bash
 npm install
@@ -60,10 +64,8 @@ npm run build    # tsc + vite build
 
 | 素材 | 來源 | 授權 |
 |------|------|------|
-| 城市建物／道具 | [Kenney City Kit](https://kenney.nl) | CC0 |
 | 音效 | [Kenney Audio](https://kenney.nl/assets?q=audio) | CC0 |
-| 動畫庫（保留供未來使用） | [Quaternius UAL](https://quaternius.com) | CC0 |
-| 台北 101 模型 | "White Taipei 101" by Elaine Wijaya Oey | CC-BY 3.0 |
+| 視覺 | 程式化 Canvas 繪製 + Higgsfield AI 生成素材 | 自有 |
 
 完整清單見 [ASSETS.md](ASSETS.md)。
 
