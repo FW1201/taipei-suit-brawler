@@ -1,0 +1,17 @@
+{
+  "neon": {
+    "backdrop": "ximen-bg.png"
+  },
+  "nightmarket": {
+    "backdrop": "shilin-bg.png"
+  },
+  "temple": {
+    "backdrop": "longshan-bg.png"
+  },
+  "skybridge": {
+    "backdrop": "xinyi-bg.png"
+  },
+  "rooftop": {
+    "backdrop": "rooftop-bg.png"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "hero": {
+    "heightM": 2.3,
+    "clips": {
+      "idle":  { "src": "hero-idle.png",   "frames": 12, "fps": 10, "loop": true,  "frameW": 256, "frameH": 256, "anchorX": 0.5, "anchorY": 0.94 },
+      "run":   { "src": "hero-run.png",    "frames": 12, "fps": 16, "loop": true,  "frameW": 256, "frameH": 256, "anchorX": 0.5, "anchorY": 0.94 },
+      "punch1":{ "src": "hero-attack.png", "frames": 12, "fps": 30, "loop": false, "frameW": 256, "frameH": 256, "anchorX": 0.5, "anchorY": 0.94 },
+      "heavy": { "src": "hero-attack.png", "frames": 12, "fps": 24, "loop": false, "frameW": 256, "frameH": 256, "anchorX": 0.5, "anchorY": 0.94 }
+    }
+  }
+}

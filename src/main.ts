@@ -7,6 +7,7 @@ import { bus } from './core/events';
 import { initAudio, playSound } from './core/audio';
 import { MANIFEST } from './core/manifest';
 import { loadSprites } from './core/sprites';
+import { loadScenes } from './core/scene-art';
 import { defaultSave, loadSave, writeSave } from './core/save';
 import { computePlayerStats } from './systems/stats';
 import { LevelRunner } from './levels/level';
@@ -31,6 +32,7 @@ class Game {
     this.save = loadSave() ?? defaultSave();
     initAudio(MANIFEST.audio);
     void loadSprites(); // AI sprite sheet（有素材自動切換，無素材用程式化角色）
+    void loadScenes();  // AI 場景 backdrop（有圖自動用，無圖用程式剪影）
     this.wireHud();
     this.engine.start();
     this.showTitle();

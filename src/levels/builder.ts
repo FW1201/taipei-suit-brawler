@@ -4,6 +4,7 @@
 //          信義空橋（白色鋼拱玻璃廊）、台北 101（如意節斗型塔身、頂樓觀景台）。
 import { Vec3 } from '../core/vec';
 import { DEPTH, type GameCamera } from '../core/camera';
+import { getBackdrop } from '../core/scene-art';
 
 export type EnvTheme = 'neon' | 'nightmarket' | 'temple' | 'skybridge' | 'rooftop';
 
@@ -275,14 +276,16 @@ export function buildEnvironment(theme: EnvTheme, length: number): Environment {
         }
       }
 
-      // 2) 遠景剪影（視差 0.22）
-      const farH = gTop * 0.78;
+      // 2) 遠景（視差 0.22）：有 AI backdrop 用圖，否則程式剪影 tile
+      const aiBg = getBackdrop(theme);
+      const farSrc: HTMLCanvasElement | HTMLImageElement = aiBg ?? farTile;
+      const farH = aiBg ? gTop * 1.04 : gTop * 0.78;
       const farY = gTop - farH;
       const off = cam.parallaxOffset(0.22);
-      const tw = farTile.width * (farH / farTile.height);
+      const tw = farSrc.width * (farH / farSrc.height);
       let fx = ((off % tw) + tw) % tw - tw;
       while (fx < w) {
-        ctx.drawImage(farTile, fx, farY, tw, farH);
+        ctx.drawImage(farSrc, fx, farY, tw, farH);
         fx += tw;
       }
       // 層間大氣霧（Alien Hominid 式深度分離）
@@ -295,14 +298,16 @@ export function buildEnvironment(theme: EnvTheme, length: number): Environment {
       // 3) 地面（各主題專屬鋪面）
       drawGround(ctx, cam, w, h, theme, spec);
 
-      // 4) 中景道具（z=0 街面後緣）
-      const viewMin = cam.x - cam.halfW - 14;
-      const viewMax = cam.x + cam.halfW + 14;
-      const m = cam.ppm * 0.78;
-      for (const p of props) {
-        if (p.x < viewMin || p.x > viewMax) continue;
-        const base = cam.worldToScreen(_gv.set(p.x, 0, 0));
-        drawProp(ctx, p, base.x, base.y, m, elapsed, theme);
+      // 4) 中景道具（z=0 街面後緣）— 僅在無 AI backdrop 時繪製（避免與 AI 場景重疊）
+      if (!aiBg) {
+        const viewMin = cam.x - cam.halfW - 14;
+        const viewMax = cam.x + cam.halfW + 14;
+        const m = cam.ppm * 0.78;
+        for (const p of props) {
+          if (p.x < viewMin || p.x > viewMax) continue;
+          const base = cam.worldToScreen(_gv.set(p.x, 0, 0));
+          drawProp(ctx, p, base.x, base.y, m, elapsed, theme);
+        }
       }
       // 中景與實體層之間的薄霧
       ctx.fillStyle = 'rgba(10,8,16,0.12)';
@@ -316,8 +321,9 @@ export function buildEnvironment(theme: EnvTheme, length: number): Environment {
     },
 
     drawForeground(ctx, cam, w, h, elapsed) {
-      // 前景電纜
-      if (theme === 'neon' || theme === 'nightmarket' || theme === 'temple') {
+      const hasAi = !!getBackdrop(theme);
+      // 前景電纜（無 AI backdrop 時才畫，避免蓋住 AI 場景）
+      if (!hasAi && (theme === 'neon' || theme === 'nightmarket' || theme === 'temple')) {
         ctx.strokeStyle = 'rgba(5,4,8,0.6)';
         ctx.lineWidth = 3.5;
         const off = cam.parallaxOffset(1.3);
@@ -332,7 +338,7 @@ export function buildEnvironment(theme: EnvTheme, length: number): Environment {
           ctx.stroke();
         }
       }
-      if (theme === 'skybridge') drawBridgeRibs(ctx, cam, w, h);
+      if (!hasAi && theme === 'skybridge') drawBridgeRibs(ctx, cam, w, h);
       if (theme === 'rooftop') {
         ctx.strokeStyle = 'rgba(255,255,255,0.07)';
         ctx.lineWidth = 1.5;

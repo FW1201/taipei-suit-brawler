@@ -153,12 +153,13 @@ export class CharacterVisual implements ICharacterVisual {
       ctx.fillRect(s.x - k * 1.5, groundY - k * 2.4, k * 3, k * 2.8);
     }
 
-    // AI sprite 模式（素材到位自動啟用）
+    // AI sprite 模式（素材到位自動啟用）：有任一 sheet 即全程用 sprite，缺對應動作退回 idle clip
     if (this.opts.spriteId) {
-      const hit = getClip(this.opts.spriteId, this.spriteState());
+      const hit = getClip(this.opts.spriteId, this.spriteState()) ?? getClip(this.opts.spriteId, 'idle');
       if (hit) {
-        this.drawSprite(ctx, hit.clip, hit.heightM, s.x, groundY, k);
-        this.drawTintFlash(ctx, s.x, groundY, k);
+        const py = p.y > 0 ? p.y * cam.ppm * s.scale : 0;
+        this.drawSprite(ctx, hit.clip, hit.heightM, s.x, groundY - py, k);
+        this.drawTintFlash(ctx, s.x, groundY - py, k);
         return;
       }
     }
@@ -167,11 +168,15 @@ export class CharacterVisual implements ICharacterVisual {
   }
 
   private spriteState(): string {
-    // sprite sheet 動作數可少於 VisualState：語意映射
-    const map: Partial<Record<VisualState, string>> = {
-      punch2: 'punch1', punch3: 'heavy', rage: 'heavy', throw: 'punch1', block: 'idle', walk: 'run',
+    // sprite sheet 動作數少於 VisualState：全部映射進 {idle, run, punch1, heavy}，避免 fallback 閃爍
+    const map: Record<VisualState, string> = {
+      idle: 'idle',
+      walk: 'run', run: 'run', dodge: 'run',
+      punch1: 'punch1', punch2: 'punch1', throw: 'punch1',
+      punch3: 'heavy', heavy: 'heavy', rage: 'heavy',
+      hit: 'idle', down: 'idle', block: 'idle',
     };
-    return map[this.state] ?? this.state;
+    return map[this.state] ?? 'idle';
   }
 
   private drawSprite(ctx: CanvasRenderingContext2D, clip: SpriteClip, heightM: number, sx: number, groundY: number, k: number): void {
