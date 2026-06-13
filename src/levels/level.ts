@@ -302,16 +302,18 @@ export class LevelRunner {
     this.cam.viewport(w, h);
     this.env.drawBackground(ctx, this.cam, w, h, this.elapsed);
 
-    // 地面互動物件（掩體/靜置物件）先依縱深畫，與角色共用 y-sort 視覺
-    this.objects.draw(ctx, this.cam);
-
-    // 實體層：依縱深 y-sort（z 小 = 遠 = 先畫）
-    const visuals = [this.player.visual, ...this.enemies.all.map((e) => e.visual)]
-      .filter((v) => !v.disposed)
-      .sort((a, b) => a.root.position.z - b.root.position.z);
-    for (const v of visuals) v.draw(ctx, this.cam);
+    // 實體層 + 場景物件統一 y-sort（z 小 = 遠 = 先畫；物件正確遮擋角色或被遮擋）
+    type Entry = { z: number; render: (ctx: CanvasRenderingContext2D) => void };
+    const entries: Entry[] = [];
+    for (const v of [this.player.visual, ...this.enemies.all.map((e) => e.visual)]) {
+      if (!v.disposed) entries.push({ z: v.root.position.z, render: (c) => v.draw(c, this.cam) });
+    }
+    for (const d of this.objects.drawables()) entries.push({ z: d.z, render: (c) => d.render(c, this.cam) });
+    entries.sort((a, b) => a.z - b.z);
+    for (const e of entries) e.render(ctx);
 
     this.objects.drawHeld(ctx, this.cam);
+    this.objects.drawBlasts(ctx, this.cam);
     this.enemies.drawProjectiles(ctx, this.cam);
     this.env.drawForeground(ctx, this.cam, w, h, this.elapsed);
   }

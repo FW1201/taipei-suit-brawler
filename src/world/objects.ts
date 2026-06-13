@@ -257,10 +257,21 @@ export class ObjectManager {
   // ───────── 繪製 ─────────
 
   draw(ctx: CanvasRenderingContext2D, cam: GameCamera): void {
-    // 物件依 depth 與實體層一起由 level 排序較理想，但此處單獨畫地面物件（held 在上層另畫）
+    // 兼容：未使用 y-sort 整合時的單獨繪製（保留供標題/結算等場景）
     const sorted = [...this.objs].filter((o) => o.state !== 'held').sort((a, b) => a.pos.z - b.pos.z);
     for (const o of sorted) this.drawObj(ctx, cam, o);
-    // 爆炸環
+    for (const b of this.blasts) this.drawBlast(ctx, cam, b);
+  }
+
+  /** 供 level y-sort 使用：回傳 [z, drawFn] 列表（held 不在內，最後由 drawHeld 畫） */
+  drawables(): Array<{ z: number; render: (ctx: CanvasRenderingContext2D, cam: GameCamera) => void }> {
+    return this.objs
+      .filter((o) => o.state !== 'held')
+      .map((o) => ({ z: o.pos.z, render: (ctx: CanvasRenderingContext2D, cam: GameCamera) => this.drawObj(ctx, cam, o) }));
+  }
+
+  /** 爆炸閃光單獨呼叫（不參與 y-sort，永遠最上層） */
+  drawBlasts(ctx: CanvasRenderingContext2D, cam: GameCamera): void {
     for (const b of this.blasts) this.drawBlast(ctx, cam, b);
   }
 

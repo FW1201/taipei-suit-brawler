@@ -40,6 +40,8 @@ export class Enemy implements Hittable {
   private cooldown = 0;        // 攻擊冷卻
   private strafeDir = Math.random() > 0.5 ? 1 : -1;
   private strafeTimer = 0;
+  private strafePauseLeft = Math.random() * 2; // 環繞中偶爾停下來「擺架式」
+  private strafePauseDur = 0;
   private enraged = false;
   private blockedRecently = 0; // 連續被打中數，用於破格擋判斷
   private fadeTimer = -1;
@@ -174,18 +176,26 @@ export class Enemy implements Hittable {
       }
 
       case 'strafe': {
-        // 環繞走位：等待攻擊權杖
+        // 環繞走位：等待攻擊權杖；偶爾停下擺架式（給動畫變化感）
         this.strafeTimer -= dt;
         if (this.strafeTimer <= 0) {
           this.strafeTimer = 1 + Math.random() * 1.5;
           this.strafeDir = Math.random() > 0.5 ? 1 : -1;
         }
-        const tangent = new Vec3(-dir.z, 0, dir.x).multiplyScalar(this.strafeDir);
-        this.position.addScaledVector(tangent, this.speed * 0.45 * dt);
-        // 維持包圍距離
-        if (dist > desiredRange + 1.5) this.position.addScaledVector(dir, this.speed * 0.5 * dt);
-        else if (dist < desiredRange * 0.7) this.position.addScaledVector(dir, -this.speed * 0.3 * dt);
-        this.visual.setState('walk');
+        this.strafePauseLeft -= dt;
+        if (this.strafePauseLeft <= 0) {
+          this.strafePauseDur = (this.strafePauseDur > 0) ? 0 : (0.6 + Math.random() * 0.9);
+          this.strafePauseLeft = this.strafePauseDur > 0 ? this.strafePauseDur : (1.5 + Math.random() * 2);
+        }
+        const paused = this.strafePauseDur > 0;
+        if (!paused) {
+          const tangent = new Vec3(-dir.z, 0, dir.x).multiplyScalar(this.strafeDir);
+          this.position.addScaledVector(tangent, this.speed * 0.45 * dt);
+          // 維持包圍距離
+          if (dist > desiredRange + 1.5) this.position.addScaledVector(dir, this.speed * 0.5 * dt);
+          else if (dist < desiredRange * 0.7) this.position.addScaledVector(dir, -this.speed * 0.3 * dt);
+        }
+        this.visual.setState(paused ? 'idle' : 'walk');
         if (this.cooldown <= 0 && dist <= desiredRange && this.host.requestAttackToken(this)) {
           this.toState('windup');
           this.visual.setState(this.def.kind === 'bruiser' ? 'heavy' : 'punch1');
