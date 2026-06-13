@@ -5,6 +5,7 @@ import { Engine } from './core/engine';
 import { GameCamera } from './core/camera';
 import { bus } from './core/events';
 import { initAudio, playSound } from './core/audio';
+import { bgm, type BgmKey } from './core/music';
 import { MANIFEST } from './core/manifest';
 import { loadSprites } from './core/sprites';
 import { loadScenes } from './core/scene-art';
@@ -13,6 +14,7 @@ import { computePlayerStats } from './systems/stats';
 import { LevelRunner } from './levels/level';
 import { getLevelDef, getQuestsForLevel, SHOP_ITEMS, SKILLS } from './data';
 import { createHUD, createTitle, createLevelMap, createShopUI, createSkillTree, createResult } from './ui';
+import { mountHotkeyHud } from './ui/hotkey-hud';
 import type { LevelId, SaveData, ShopItemDef } from './types';
 
 class Game {
@@ -33,6 +35,7 @@ class Game {
     initAudio(MANIFEST.audio);
     void loadSprites(); // AI sprite sheet（有素材自動切換，無素材用程式化角色）
     void loadScenes();  // AI 場景 backdrop（有圖自動用，無圖用程式剪影）
+    mountHotkeyHud();   // 右下角快捷鍵提示 + BGM 開關
     this.wireHud();
     this.engine.start();
     this.showTitle();
@@ -58,6 +61,7 @@ class Game {
   private showTitle(): void {
     this.buildBackdrop();
     bus.emit('state:changed', { state: 'title' });
+    bgm.play('title');
     const hasSave = loadSave() !== null;
     this.title.show(
       () => { this.save = defaultSave(); writeSave(this.save); this.title.hide(); this.showMap(); },
@@ -92,6 +96,7 @@ class Game {
   // ───────── 場景：選關地圖 ─────────
   private showMap(): void {
     bus.emit('state:changed', { state: 'map' });
+    bgm.play('title');
     this.hud.hide();
     this.map.show({
       unlockedLevel: this.save.unlockedLevel,
@@ -104,6 +109,11 @@ class Game {
   // ───────── 場景：關卡 ─────────
   private startLevel(id: LevelId): void {
     bus.emit('state:changed', { state: 'level' });
+    const LEVEL_BGM: Record<LevelId, BgmKey> = {
+      1: 'lv1_neon', 2: 'lv2_nightmarket', 3: 'lv3_temple',
+      4: 'lv4_skybridge', 5: 'lv5_rooftop',
+    };
+    bgm.play(LEVEL_BGM[id]);
     this.currentLevel = id;
     this.levelMoneyLive = 0;
     this.teardownLevel();
@@ -134,6 +144,7 @@ class Game {
       this.hud,
       (outcome) => {
         bus.emit('state:changed', { state: 'result' });
+        bgm.play(outcome.success ? 'result_win' : 'result_fail');
         this.teardownLevel();
         if (outcome.success) {
           // 入帳
@@ -177,6 +188,7 @@ class Game {
   // ───────── 場景：商店 + 技能樹 ─────────
   private showShop(onDone: () => void): void {
     bus.emit('state:changed', { state: 'shop' });
+    bgm.play('shop');
     this.shop.show({
       money: this.save.money,
       save: this.save,

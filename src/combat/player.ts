@@ -368,7 +368,8 @@ export class PlayerController {
     this.hp -= final;
     this.gainRage(4 * this.stats.rageGainMult);
     this.visual.flashTint(0xff0000);
-    playSound('hurt');
+    // 慘叫依傷害等級分輕重
+    playSound(final >= 18 ? 'heavyHurt' : 'hurt');
     bus.emit('fx:shake', { strength: 0.32 });
 
     // 擊退
@@ -383,10 +384,12 @@ export class PlayerController {
         this.state = 'downed';
         this.downTimer = 3;
         this.visual.setState('down');
+        playSound('playerDown');
         bus.emit('player:downed', { revivesLeft: this.revivesLeft });
       } else {
         this.state = 'dead';
         this.visual.setState('down');
+        playSound('playerDown');
         bus.emit('player:downed', { revivesLeft: -1 }); // -1 = 徹底倒下，關卡失敗
       }
     } else {

@@ -117,7 +117,8 @@ export class ObjectManager {
   followCarrier(pos: Vec3, facing: number, dt: number): void {
     const dir = Math.sin(facing) >= 0 ? 1 : -1;
     if (this.held) {
-      this.held.pos.set(pos.x + dir * 0.35, 1.5, pos.z);
+      // 物件貼在玩家胸前手部位置（依面向略微前移）；y=1.25 = 胸口高度
+      this.held.pos.set(pos.x + dir * 0.18, 1.25, pos.z);
       this.held.spin += dt * 4;
     }
     if (this.riding) {
@@ -281,12 +282,16 @@ export class ObjectManager {
     }
     const img = loadPropImg(o.kind);
     if (img.ready) {
-      const h = o.radius * 2.6 * k;
+      // 手持物件用較大倍率以遮住手部與石頭；地面物件用底部 anchor（站地）
+      const held = o.state === 'held';
+      const sizeMul = held ? 1.6 : 2.6;       // 1.6 = 約 1.4m 高，足以覆蓋手部
+      const h = o.radius * sizeMul * k;
       const w = h * (img.w / img.h);
+      const anchorY = held ? 0.5 : 0.86;      // 0.5 = 中心；0.86 = 接近底部（站地用）
       ctx.save();
       ctx.translate(s.x, s.y);
       if (o.kind === 'football') ctx.rotate(o.spin);
-      ctx.drawImage(img.img, -w / 2, -h * 0.86, w, h);
+      ctx.drawImage(img.img, -w / 2, -h * anchorY, w, h);
       ctx.restore();
       return;
     }
