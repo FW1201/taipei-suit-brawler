@@ -9,11 +9,11 @@ import { bgm, type BgmKey } from './core/music';
 import { MANIFEST } from './core/manifest';
 import { loadSprites } from './core/sprites';
 import { loadScenes } from './core/scene-art';
-import { defaultSave, loadSave, writeSave } from './core/save';
+import { defaultSave, loadSave, writeSave, clearSave } from './core/save';
 import { computePlayerStats } from './systems/stats';
 import { LevelRunner } from './levels/level';
 import { getLevelDef, getQuestsForLevel, SHOP_ITEMS, SKILLS } from './data';
-import { createHUD, createTitle, createLevelMap, createShopUI, createSkillTree, createResult } from './ui';
+import { createHUD, createTitle, createLevelMap, createShopUI, createSkillTree, createResult, createEnding } from './ui';
 import { mountHotkeyHud } from './ui/hotkey-hud';
 import type { LevelId, SaveData, ShopItemDef } from './types';
 
@@ -25,6 +25,7 @@ class Game {
   private shop = createShopUI();
   private skillTree = createSkillTree();
   private result = createResult();
+  private ending = createEnding();
 
   private save: SaveData;
   private runner: LevelRunner | null = null;
@@ -169,6 +170,11 @@ class Game {
           skillPointsEarned: outcome.skillPointsEarned,
           onContinue: () => {
             this.result.hide();
+            // 第五關（最終 Boss）通關 → 通關全劇結局畫面
+            if (outcome.success && id === 5 && outcome.rank) {
+              this.showEnding(outcome.rank, outcome.moneyEarned, outcome.skillPointsEarned);
+              return;
+            }
             if (outcome.success) this.showShop(() => this.showMap());
             else this.showMap();
           },
@@ -183,6 +189,32 @@ class Game {
     this.runner?.dispose();
     this.runner = null;
     if (this.backdropOff) { this.backdropOff(); this.backdropOff = null; }
+  }
+
+  // ───────── 場景：通關結局 ─────────
+  private showEnding(finalRank: import('./types').LevelRank, finalMoneyEarned: number, finalSkillPointsEarned: number): void {
+    bus.emit('state:changed', { state: 'result' });
+    bgm.play('ending');
+    this.buildBackdrop();
+    this.ending.show({
+      save: this.save,
+      finalRank,
+      finalMoneyEarned,
+      finalSkillPointsEarned,
+      onRestart: () => {
+        // 清空存檔 → 預設新檔 → 回標題
+        clearSave();
+        this.save = defaultSave();
+        writeSave(this.save);
+        this.ending.hide();
+        this.showTitle();
+      },
+      onFreeplay: () => {
+        // 留檔，回選關地圖（自由重玩、累積金錢/技能）
+        this.ending.hide();
+        this.showMap();
+      },
+    });
   }
 
   // ───────── 場景：商店 + 技能樹 ─────────

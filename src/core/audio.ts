@@ -73,6 +73,31 @@ const SYNTH_FALLBACK: Record<string, () => void> = {
   upgrade: () => synthBeep(550, 120, 'sine', 0.05),
   heal: () => synthBeep(440, 150, 'sine', 0.05),
   questDone: () => synthBeep(660, 200, 'sine', 0.06),
+  // 結局慶祝喇叭：C 大調琶音上揚（do mi sol do' 高八度）
+  fanfare: () => {
+    [523, 659, 784, 1047].forEach((hz, i) =>
+      setTimeout(() => synthBeep(hz, 280, 'sawtooth', 0.07), i * 90));
+    setTimeout(() => synthBeep(1568, 480, 'square', 0.05), 360);
+  },
+  // 人群歡呼（白噪 + bandpass 模擬）
+  cheer: () => {
+    try {
+      ctx ??= new AudioContext();
+      const dur = 1.4;
+      const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() - 0.5) * 0.6;
+      const src = ctx.createBufferSource(); src.buffer = buf;
+      const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1500; f.Q.value = 1.5;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, ctx.currentTime);
+      g.gain.linearRampToValueAtTime(0.18, ctx.currentTime + 0.25);
+      g.gain.setValueAtTime(0.18, ctx.currentTime + 0.9);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+      src.connect(f).connect(g).connect(ctx.destination);
+      src.start();
+    } catch { /* noop */ }
+  },
 };
 
 // 遊戲語意鍵 → manifest 實際檔案鍵（多個 = 隨機挑一個避免單調）

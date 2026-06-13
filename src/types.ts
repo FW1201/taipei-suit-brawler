@@ -286,3 +286,16 @@ export interface ResultAPI {
   }): void;
   hide(): void;
 }
+
+/** 通關全劇結局畫面：完成第五關後觸發，顯示總成績並提供「重新開始 / 自由模式」 */
+export interface EndingAPI {
+  show(opts: {
+    save: SaveData;
+    finalRank: LevelRank;
+    finalMoneyEarned: number;
+    finalSkillPointsEarned: number;
+    onRestart: () => void;    // 清空存檔回到標題
+    onFreeplay: () => void;   // 留檔回選關地圖
+  }): void;
+  hide(): void;
+}

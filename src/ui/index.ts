@@ -6,3 +6,4 @@ export { createLevelMap } from './level-map';
 export { createShopUI } from './shop-ui';
 export { createSkillTree } from './skill-tree';
 export { createResult } from './result';
+export { createEnding } from './ending';

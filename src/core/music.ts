@@ -8,7 +8,8 @@
 
 export type BgmKey =
   | 'title' | 'lv1_neon' | 'lv2_nightmarket' | 'lv3_temple'
-  | 'lv4_skybridge' | 'lv5_rooftop' | 'shop' | 'result_win' | 'result_fail';
+  | 'lv4_skybridge' | 'lv5_rooftop' | 'shop' | 'result_win' | 'result_fail'
+  | 'ending';
 
 interface Track {
   bpm: number;
@@ -89,6 +90,13 @@ const TRACKS: Record<BgmKey, Track> = {
     leadWave: 'sine', bassWave: 'sine',
     drumPattern: [1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0],
     leadDensity: 0.25, arp: false, vol: 0.5,
+  },
+  // 結局：壯麗凱旋；大調根（M3+4 度上揚），雙倍 lead，鼓密集
+  ending: {
+    bpm: 128, rootMidi: 52, chords: [0, 5, 7, 12, 0, -5, -2, 5], scale: [0, 2, 4, 5, 7, 9, 11, 12, 14],
+    leadWave: 'sawtooth', bassWave: 'square',
+    drumPattern: [1,3,2,3, 1,3,2,3, 1,3,2,3, 1,2,3,1],
+    leadDensity: 0.85, arp: true, vol: 0.85,
   },
 };
 
