@@ -75,12 +75,14 @@ export class ObjectManager {
   reset(): void { this.objs = []; this.blasts = []; this.held = null; this.riding = null; }
 
   spawn(kind: PropKind, pos: Vec3): void {
-    const solid = kind === 'crate' || kind === 'barrier';
+    const SOLID = new Set(['crate', 'barrier', 'tire', 'cone', 'trashcan', 'hydrant']);
+    const HP: Record<string, number> = { barrier: 9999, hydrant: 9999, tire: 9999, crate: 30, trashcan: 16, cone: 8 };
+    const RAD: Record<string, number> = { football: 0.44, mower: 0.7, barrier: 1.1, tire: 0.62, cone: 0.32, trashcan: 0.42, hydrant: 0.3 };
     this.objs.push({
       kind, pos: pos.clone(), vel: new Vec3(), state: 'rest',
-      hp: kind === 'barrier' ? 9999 : kind === 'crate' ? 30 : 1,
-      spin: 0, radius: kind === 'football' ? 0.44 : kind === 'mower' ? 0.7 : kind === 'barrier' ? 1.1 : 0.55,
-      life: 0, hitSet: new Set(), solid,
+      hp: HP[kind] ?? 1,
+      spin: 0, radius: RAD[kind] ?? 0.55,
+      life: 0, hitSet: new Set(), solid: SOLID.has(kind),
     });
   }
 
@@ -341,6 +343,41 @@ export class ObjectManager {
         ctx.beginPath(); ctx.rect(-r, -r * 2, r * 2, r * 2); ctx.fill(); ctx.stroke();
         ctx.strokeStyle = '#7a5226';
         ctx.beginPath(); ctx.moveTo(-r, -r * 2); ctx.lineTo(r, 0); ctx.moveTo(r, -r * 2); ctx.lineTo(-r, 0); ctx.stroke();
+        break;
+      }
+      case 'tire': { // 輪胎堆（低掩體）
+        for (let i = 0; i < 3; i++) {
+          ctx.fillStyle = i % 2 ? '#1c1c1c' : '#262626';
+          ctx.beginPath(); ctx.ellipse(0, -r * (0.5 + i * 0.7), r, r * 0.5, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+          ctx.fillStyle = '#3a3a3a';
+          ctx.beginPath(); ctx.ellipse(0, -r * (0.5 + i * 0.7), r * 0.45, r * 0.22, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        }
+        break;
+      }
+      case 'cone': { // 三角錐
+        ctx.fillStyle = '#f06a1e';
+        ctx.beginPath(); ctx.moveTo(0, -r * 2.0); ctx.lineTo(r * 0.7, 0); ctx.lineTo(-r * 0.7, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#f5f0e8';
+        ctx.beginPath(); ctx.moveTo(-r * 0.36, -r * 1.05); ctx.lineTo(r * 0.36, -r * 1.05); ctx.lineTo(r * 0.46, -r * 0.78); ctx.lineTo(-r * 0.46, -r * 0.78); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#f06a1e'; ctx.fillRect(-r, -r * 0.14, r * 2, r * 0.18); ctx.strokeRect(-r, -r * 0.14, r * 2, r * 0.18);
+        break;
+      }
+      case 'trashcan': { // 鐵皮垃圾桶
+        ctx.fillStyle = '#5a5f66';
+        ctx.beginPath(); ctx.moveTo(-r * 0.8, -r * 2.1); ctx.lineTo(r * 0.8, -r * 2.1); ctx.lineTo(r * 0.66, 0); ctx.lineTo(-r * 0.66, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#6a6f76';
+        ctx.beginPath(); ctx.ellipse(0, -r * 2.15, r * 0.86, r * 0.26, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = Math.max(1.2, r * 0.04 * 20 * 0.06);
+        for (const yy of [-1.5, -0.9]) { ctx.beginPath(); ctx.moveTo(-r * 0.74, r * yy); ctx.lineTo(r * 0.74, r * yy); ctx.stroke(); }
+        break;
+      }
+      case 'hydrant': { // 紅色消防栓
+        ctx.fillStyle = '#cc3a2e';
+        ctx.beginPath(); ctx.roundRect(-r * 0.7, -r * 2.0, r * 1.4, r * 2.0, r * 0.3); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.arc(0, -r * 2.1, r * 0.7, Math.PI, 0); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#a32a20';
+        ctx.beginPath(); ctx.arc(-r, -r * 1.2, r * 0.42, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.arc(r, -r * 1.2, r * 0.42, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
         break;
       }
       case 'barrier': { // 黃黑施工拒馬

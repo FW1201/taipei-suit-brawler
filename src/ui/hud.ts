@@ -23,6 +23,12 @@ export function createHUD(): HudAPI {
   const rageFill = el('div', 'tsb-bar-fill tsb-bar-fill--rage');
   rageBar.append(rageFill);
 
+  // 重擊蓄力條（金色，滿格可放重擊 K）
+  const powerBar = el('div', 'tsb-bar tsb-bar--power');
+  const powerFill = el('div', 'tsb-bar-fill tsb-bar-fill--power');
+  const powerLabel = el('div', 'tsb-bar-label tsb-bar-label--power', '重擊');
+  powerBar.append(powerFill, powerLabel);
+
   const teaRow = el('div', 'tsb-tea-row');
   const teaSlots: HTMLElement[] = [];
   for (let i = 0; i < BUBBLE_TEA_MAX; i++) {
@@ -31,7 +37,7 @@ export function createHUD(): HudAPI {
     teaRow.append(slot);
   }
 
-  topLeft.append(hpBar, rageBar, teaRow);
+  topLeft.append(hpBar, rageBar, powerBar, teaRow);
 
   // ── 右上：任務清單 ──
   const questBox = el('div', 'tsb-hud-quests');
@@ -79,6 +85,10 @@ export function createHUD(): HudAPI {
     },
     setRage(rage) {
       rageFill.style.width = `${Math.max(0, Math.min(rage, 100))}%`;
+    },
+    setPower(power, ready) {
+      powerFill.style.width = `${Math.max(0, Math.min(power, 100))}%`;
+      powerBar.classList.toggle('tsb-bar--power-ready', ready);
     },
     setCombo(count) {
       if (count <= 0) {

@@ -122,7 +122,10 @@ export interface QuestProgress {
 
 // ───────────────────────── 關卡 ─────────────────────────
 
-export type PropKind = 'explosive' | 'football' | 'mower' | 'crate' | 'barrier';
+export type PropKind =
+  | 'explosive' | 'football' | 'mower'        // 可攜/可投擲
+  | 'crate' | 'barrier'                        // 大型掩體
+  | 'tire' | 'cone' | 'trashcan' | 'hydrant';  // 散落街道的小型掩體
 
 export interface EnemyWave {
   /** 該波出怪：enemyDefId → 數量 */
@@ -188,6 +191,7 @@ export interface GameEvents {
   'player:damaged': { hp: number; maxHp: number };
   'player:healed': { hp: number; maxHp: number };
   'player:rage': { rage: number };               // 0-100
+  'player:power': { power: number; ready: boolean }; // 重擊蓄力 0-100，ready = 可釋放
   'player:combo': { count: number };             // 當前連擊數，0 = 中斷
   'player:downed': { revivesLeft: number };
   'player:revived': { hp: number };
@@ -218,6 +222,7 @@ export interface HudAPI {
   hide(): void;
   setHP(cur: number, max: number): void;
   setRage(rage: number): void;            // 0-100
+  setPower(power: number, ready: boolean): void; // 重擊蓄力 0-100
   setCombo(count: number): void;          // 0 = 隱藏
   setMoney(money: number): void;
   setQuests(quests: { title: string; progressText: string; done: boolean; failed: boolean; main: boolean }[]): void;

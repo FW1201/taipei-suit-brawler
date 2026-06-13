@@ -2,10 +2,561 @@
   "hero": {
     "heightM": 2.3,
     "clips": {
-      "idle":  { "src": "hero-idle.png",   "frames": 12, "fps": 10, "loop": true,  "frameW": 256, "frameH": 256, "anchorX": 0.5, "anchorY": 0.94 },
-      "run":   { "src": "hero-run.png",    "frames": 12, "fps": 16, "loop": true,  "frameW": 256, "frameH": 256, "anchorX": 0.5, "anchorY": 0.94 },
-      "punch1":{ "src": "hero-attack.png", "frames": 12, "fps": 30, "loop": false, "frameW": 256, "frameH": 256, "anchorX": 0.5, "anchorY": 0.94 },
-      "heavy": { "src": "hero-attack.png", "frames": 12, "fps": 24, "loop": false, "frameW": 256, "frameH": 256, "anchorX": 0.5, "anchorY": 0.94 }
+      "idle": {
+        "src": "hero-idle.png",
+        "frames": 12,
+        "fps": 10,
+        "loop": true,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      },
+      "run": {
+        "src": "hero-run.png",
+        "frames": 12,
+        "fps": 16,
+        "loop": true,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      },
+      "punch1": {
+        "src": "hero-attack.png",
+        "frames": 12,
+        "fps": 28,
+        "loop": false,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      },
+      "heavy": {
+        "src": "hero-attack.png",
+        "frames": 12,
+        "fps": 22,
+        "loop": false,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      },
+      "throw": {
+        "src": "hero-throw.png",
+        "frames": 12,
+        "fps": 24,
+        "loop": false,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      },
+      "carry": {
+        "src": "hero-carry.png",
+        "frames": 12,
+        "fps": 10,
+        "loop": true,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      }
+    }
+  },
+  "punk": {
+    "heightM": 2.3,
+    "clips": {
+      "idle": {
+        "src": "punk-idle.png",
+        "frames": 12,
+        "fps": 10,
+        "loop": true,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      },
+      "run": {
+        "src": "punk-run.png",
+        "frames": 12,
+        "fps": 16,
+        "loop": true,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      },
+      "punch1": {
+        "src": "punk-attack.png",
+        "frames": 12,
+        "fps": 28,
+        "loop": false,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      },
+      "heavy": {
+        "src": "punk-attack.png",
+        "frames": 12,
+        "fps": 22,
+        "loop": false,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      }
+    }
+  },
+  "knifer": {
+    "heightM": 2.3,
+    "clips": {
+      "idle": {
+        "src": "knifer-idle.png",
+        "frames": 12,
+        "fps": 10,
+        "loop": true,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      },
+      "run": {
+        "src": "knifer-run.png",
+        "frames": 12,
+        "fps": 16,
+        "loop": true,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      },
+      "punch1": {
+        "src": "knifer-attack.png",
+        "frames": 12,
+        "fps": 28,
+        "loop": false,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      },
+      "heavy": {
+        "src": "knifer-attack.png",
+        "frames": 12,
+        "fps": 22,
+        "loop": false,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      }
+    }
+  },
+  "bruiser": {
+    "heightM": 2.3,
+    "clips": {
+      "idle": {
+        "src": "bruiser-idle.png",
+        "frames": 12,
+        "fps": 10,
+        "loop": true,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      },
+      "run": {
+        "src": "bruiser-run.png",
+        "frames": 12,
+        "fps": 16,
+        "loop": true,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      },
+      "punch1": {
+        "src": "bruiser-attack.png",
+        "frames": 12,
+        "fps": 28,
+        "loop": false,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      },
+      "heavy": {
+        "src": "bruiser-attack.png",
+        "frames": 12,
+        "fps": 22,
+        "loop": false,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      }
+    }
+  },
+  "thrower": {
+    "heightM": 2.3,
+    "clips": {
+      "idle": {
+        "src": "thrower-idle.png",
+        "frames": 12,
+        "fps": 10,
+        "loop": true,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      },
+      "run": {
+        "src": "thrower-run.png",
+        "frames": 12,
+        "fps": 16,
+        "loop": true,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      },
+      "punch1": {
+        "src": "thrower-attack.png",
+        "frames": 12,
+        "fps": 28,
+        "loop": false,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      },
+      "heavy": {
+        "src": "thrower-attack.png",
+        "frames": 12,
+        "fps": 22,
+        "loop": false,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      }
+    }
+  },
+  "bodyguard": {
+    "heightM": 2.3,
+    "clips": {
+      "idle": {
+        "src": "bodyguard-idle.png",
+        "frames": 12,
+        "fps": 10,
+        "loop": true,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      },
+      "run": {
+        "src": "bodyguard-run.png",
+        "frames": 12,
+        "fps": 16,
+        "loop": true,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      },
+      "punch1": {
+        "src": "bodyguard-attack.png",
+        "frames": 12,
+        "fps": 28,
+        "loop": false,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      },
+      "heavy": {
+        "src": "bodyguard-attack.png",
+        "frames": 12,
+        "fps": 22,
+        "loop": false,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      }
+    }
+  },
+  "berserker": {
+    "heightM": 2.3,
+    "clips": {
+      "idle": {
+        "src": "berserker-idle.png",
+        "frames": 12,
+        "fps": 10,
+        "loop": true,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      },
+      "run": {
+        "src": "berserker-run.png",
+        "frames": 12,
+        "fps": 16,
+        "loop": true,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      },
+      "punch1": {
+        "src": "berserker-attack.png",
+        "frames": 12,
+        "fps": 28,
+        "loop": false,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      },
+      "heavy": {
+        "src": "berserker-attack.png",
+        "frames": 12,
+        "fps": 22,
+        "loop": false,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      }
+    }
+  },
+  "boss_ximen": {
+    "heightM": 2.3,
+    "clips": {
+      "idle": {
+        "src": "boss_ximen-idle.png",
+        "frames": 12,
+        "fps": 10,
+        "loop": true,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      },
+      "run": {
+        "src": "boss_ximen-run.png",
+        "frames": 12,
+        "fps": 16,
+        "loop": true,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      },
+      "punch1": {
+        "src": "boss_ximen-attack.png",
+        "frames": 12,
+        "fps": 28,
+        "loop": false,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      },
+      "heavy": {
+        "src": "boss_ximen-attack.png",
+        "frames": 12,
+        "fps": 22,
+        "loop": false,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      }
+    }
+  },
+  "boss_shilin": {
+    "heightM": 2.3,
+    "clips": {
+      "idle": {
+        "src": "boss_shilin-idle.png",
+        "frames": 12,
+        "fps": 10,
+        "loop": true,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      },
+      "run": {
+        "src": "boss_shilin-run.png",
+        "frames": 12,
+        "fps": 16,
+        "loop": true,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      },
+      "punch1": {
+        "src": "boss_shilin-attack.png",
+        "frames": 12,
+        "fps": 28,
+        "loop": false,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      },
+      "heavy": {
+        "src": "boss_shilin-attack.png",
+        "frames": 12,
+        "fps": 22,
+        "loop": false,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      }
+    }
+  },
+  "boss_longshan": {
+    "heightM": 2.3,
+    "clips": {
+      "idle": {
+        "src": "boss_longshan-idle.png",
+        "frames": 12,
+        "fps": 10,
+        "loop": true,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      },
+      "run": {
+        "src": "boss_longshan-run.png",
+        "frames": 12,
+        "fps": 16,
+        "loop": true,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      },
+      "punch1": {
+        "src": "boss_longshan-attack.png",
+        "frames": 12,
+        "fps": 28,
+        "loop": false,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      },
+      "heavy": {
+        "src": "boss_longshan-attack.png",
+        "frames": 12,
+        "fps": 22,
+        "loop": false,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      }
+    }
+  },
+  "boss_xinyi": {
+    "heightM": 2.3,
+    "clips": {
+      "idle": {
+        "src": "boss_xinyi-idle.png",
+        "frames": 12,
+        "fps": 10,
+        "loop": true,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      },
+      "run": {
+        "src": "boss_xinyi-run.png",
+        "frames": 12,
+        "fps": 16,
+        "loop": true,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      },
+      "punch1": {
+        "src": "boss_xinyi-attack.png",
+        "frames": 12,
+        "fps": 28,
+        "loop": false,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      },
+      "heavy": {
+        "src": "boss_xinyi-attack.png",
+        "frames": 12,
+        "fps": 22,
+        "loop": false,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      }
+    }
+  },
+  "boss_101": {
+    "heightM": 2.3,
+    "clips": {
+      "idle": {
+        "src": "boss_101-idle.png",
+        "frames": 12,
+        "fps": 10,
+        "loop": true,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      },
+      "run": {
+        "src": "boss_101-run.png",
+        "frames": 12,
+        "fps": 16,
+        "loop": true,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      },
+      "punch1": {
+        "src": "boss_101-attack.png",
+        "frames": 12,
+        "fps": 28,
+        "loop": false,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      },
+      "heavy": {
+        "src": "boss_101-attack.png",
+        "frames": 12,
+        "fps": 22,
+        "loop": false,
+        "frameW": 256,
+        "frameH": 256,
+        "anchorX": 0.5,
+        "anchorY": 0.94
+      }
     }
   }
 }

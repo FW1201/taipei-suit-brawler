@@ -21,6 +21,8 @@ const HEAVY_DURATION = 0.42;
 const HEAVY_HIT_AT = 0.27;
 const DODGE_DURATION = 0.42;
 const COMBO_QUEUE_WINDOW = 0.5;  // 收招後可接下一段的窗口
+const POWER_COST = 100;          // 重擊所需蓄力（輕拳命中 +25 → 約 4 拳蓄滿）
+const POWER_PER_HIT = 25;        // 每次輕拳命中累積
 
 export class PlayerController {
   readonly position = new Vec3();
@@ -28,7 +30,8 @@ export class PlayerController {
   readonly visual: ICharacterVisual;
 
   hp: number;
-  rage = 0;          // 0-100
+  rage = 0;          // 0-100（必殺）
+  power = 0;         // 0-100（重擊蓄力：輕拳命中累積，滿 POWER_COST 才能放重擊）
   revivesLeft = 2;
 
   private state: PlayerState = 'free';
@@ -82,6 +85,7 @@ export class PlayerController {
     this.position.copy(spawnPos);
     this.hp = this.stats.maxHp;
     this.rage = 0;
+    this.power = 0;
     this.revivesLeft = revives;
     this.state = 'free';
     this.comboStep = 0;
@@ -199,11 +203,22 @@ export class PlayerController {
   }
 
   private startHeavy(): void {
+    // 重擊需蓄滿能量才能釋放（輕拳命中累積 power）
+    if (this.power < POWER_COST) {
+      playSound('uiClick');               // 未蓄滿：提示音 + 閃爍能量條
+      bus.emit('player:power', { power: this.power, ready: false });
+      return;
+    }
+    this.power = Math.max(0, this.power - POWER_COST);
+    bus.emit('player:power', { power: this.power, ready: this.power >= POWER_COST });
     this.state = 'attack';
     this.stateTime = 0;
     this.comboStep = -1; // -1 = heavy
     this.hitApplied = false;
     this.visual.setState('heavy');
+    this.visual.setRageGlow(true);        // 蓄力重擊：金色光效差異
+    setTimeout(() => { if (this.state !== 'rage') this.visual.setRageGlow(false); }, 360);
+    bus.emit('fx:shake', { strength: 0.2 });
     this.autoFace();
   }
 
@@ -259,6 +274,10 @@ export class PlayerController {
       this.comboResetTimer = 2.2;
       bus.emit('player:combo', { count: this.comboHits });
       this.gainRage((isHeavy ? 14 : 8) * this.stats.rageGainMult);
+      if (!isHeavy) {                       // 輕拳命中累積重擊蓄力
+        this.power = Math.min(POWER_COST, this.power + POWER_PER_HIT);
+        bus.emit('player:power', { power: this.power, ready: this.power >= POWER_COST });
+      }
     }
   }
 

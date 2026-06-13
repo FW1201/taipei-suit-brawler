@@ -129,6 +129,12 @@ export function ensureStyles(): void {
 .tsb-bar-fill--hp { background: linear-gradient(90deg, #FF2F4E, #FF6B35); box-shadow: 0 0 10px rgba(255, 47, 78, 0.7); }
 .tsb-bar-fill--rage { background: linear-gradient(90deg, #00D4FF, #7B2FFF); box-shadow: 0 0 12px rgba(0, 212, 255, 0.8); }
 .tsb-bar--rage { height: 12px; }
+.tsb-bar--power { height: 12px; }
+.tsb-bar-fill--power { background: linear-gradient(90deg, #FFB627, #FF6B35); box-shadow: 0 0 10px rgba(255, 150, 40, 0.7); }
+.tsb-bar-label--power { justify-content: flex-start; padding-left: 8px; font-size: 10px; color: rgba(255,255,255,0.65); }
+.tsb-bar--power-ready .tsb-bar-fill--power { box-shadow: 0 0 16px rgba(255, 200, 60, 1); animation: tsb-power-pulse 0.7s ease-in-out infinite; }
+.tsb-bar--power-ready .tsb-bar-label--power { color: #FFE08A; font-weight: 900; }
+@keyframes tsb-power-pulse { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.55); } }
 .tsb-bar-label { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.8); letter-spacing: 0.08em; }
 .tsb-tea-row { display: flex; gap: 6px; align-items: center; }
 .tsb-tea-slot { width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; font-size: 16px; border: 1px solid rgba(0, 212, 255, 0.4); border-radius: 6px; background: rgba(13, 17, 23, 0.6); }

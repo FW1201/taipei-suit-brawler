@@ -43,6 +43,7 @@ class Game {
     bus.on('player:damaged', ({ hp, maxHp }) => this.hud.setHP(hp, maxHp));
     bus.on('player:healed', ({ hp, maxHp }) => this.hud.setHP(hp, maxHp));
     bus.on('player:rage', ({ rage }) => this.hud.setRage(rage));
+    bus.on('player:power', ({ power, ready }) => this.hud.setPower(power, ready));
     bus.on('player:combo', ({ count }) => this.hud.setCombo(count));
     bus.on('enemy:died', ({ money }) => {
       // 關卡內即時顯示累計（實際入帳在結算）
@@ -113,6 +114,7 @@ class Game {
     this.hud.setBubbleTea(this.save.bubbleTeaCount);
     this.hud.setHP(stats.maxHp, stats.maxHp);
     this.hud.setRage(0);
+    this.hud.setPower(0, false);
     this.hud.setCombo(0);
 
     this.runner = new LevelRunner(

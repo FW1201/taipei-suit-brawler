@@ -11,7 +11,7 @@ import { ObjectManager } from '../world/objects';
 import { QuestTracker } from '../systems/quest';
 import { CombatFX } from '../combat/fx';
 import { bus } from '../core/events';
-import type { HudAPI, LevelDef, LevelRank, PlayerStats, QuestDef } from '../types';
+import type { HudAPI, LevelDef, LevelRank, PlayerStats, PropKind, QuestDef } from '../types';
 import { getEnemyDef } from '../data';
 
 export interface LevelOutcome {
@@ -149,14 +149,25 @@ export class LevelRunner {
     if (this.level.waves.length > 1) {
       this.hud.announce(`第 ${idx + 1} / ${this.level.waves.length} 波`, 1500);
     }
-    // 互動物件：在鎖屏區內散佈（爆炸物/足球/除草機/掩體）
+    // 互動物件：在鎖屏區內散佈（爆炸物/足球/除草機/大型掩體），分散到不同深度
     if (wave.props?.length) {
       const c = this.boundsCenter();
       wave.props.forEach((kind, i) => {
-        const x = c + (i - (wave.props!.length - 1) / 2) * 2.6 + (Math.random() - 0.5);
-        const z = 0.8 + Math.random() * (DEPTH - 1.6);
+        const x = c + (i - (wave.props!.length - 1) / 2) * 3.2 + (Math.random() - 0.5);
+        const z = 0.7 + Math.random() * (DEPTH - 1.4);
         this.objects.spawn(kind, new Vec3(x, 0, z));
       });
+    }
+    // 場景掩體：散落整個可走街道（隨機 x/z），供繞行躲避遠程攻擊
+    const SCENERY: PropKind[] = ['tire', 'cone', 'trashcan', 'hydrant', 'crate'];
+    const half = this.cam.halfW;
+    const lo = this.boundsCenter() - half + 1.2, hi = this.boundsCenter() + half - 1.2;
+    const n = 4 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < n; i++) {
+      const kind = SCENERY[Math.floor(Math.random() * SCENERY.length)];
+      const x = lo + Math.random() * (hi - lo);
+      const z = 0.6 + Math.random() * (DEPTH - 1.2);
+      this.objects.spawn(kind, new Vec3(x, 0, z));
     }
     // 從鎖屏視野左右兩側進場
     let side = 1;

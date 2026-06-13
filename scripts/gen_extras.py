@@ -37,11 +37,35 @@ HERO_ANIMS = {
     "carry": "character holds a heavy object up with both hands in front of chest, bracing and walking",
 }
 
+def upload_local(path):
+    """上傳本機圖檔，回傳 upload id（供 --image_url 使用）"""
+    r = subprocess.run([HF, "upload", "create", path, "--json"], capture_output=True, text=True, timeout=180)
+    out = r.stdout.strip()
+    try:
+        data = json.loads(out)
+        d = data[0] if isinstance(data, list) else data
+        return d.get("id") or d.get("upload_id") or d.get("uuid")
+    except Exception:
+        for tok in out.split():
+            if len(tok) >= 32 and tok.count("-") >= 4:
+                return tok
+        log("  ! upload parse fail: " + (out[-200:] if out else r.stderr[-200:]))
+        return None
+
 def gen_hero():
     urls = json.load(open(URLS)) if os.path.exists(URLS) else {}
     hero_url = urls.get("hero")
     if not hero_url:
-        log("[hero-extra] no hero anchor url, skip"); return
+        anchor = os.path.join(SPRITES, "raw/hero_anchor.png")
+        if os.path.exists(anchor):
+            log("[hero] uploading local anchor...")
+            hero_url = upload_local(anchor)
+            if hero_url:
+                urls["hero"] = hero_url
+                json.dump(urls, open(URLS, "w"), ensure_ascii=False, indent=2)
+                log("[hero] anchor uploaded: " + str(hero_url)[:40])
+    if not hero_url:
+        log("[hero-extra] no hero anchor url/upload, skip"); return
     for kind, prompt in HERO_ANIMS.items():
         out = os.path.join(SPRITES, f"hero-{kind}.png")
         if os.path.exists(out):
