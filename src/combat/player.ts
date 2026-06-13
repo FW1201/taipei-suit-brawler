@@ -147,13 +147,14 @@ export class PlayerController {
     const moving = move.lengthSq() > 0;
     const riding = this.props?.isRiding() ?? false;
 
+    const carrying = this.props?.hasHeld() ?? false;
     if (moving) {
       const spd = this.stats.moveSpeed * (riding ? 1.7 : 1);
       this.position.addScaledVector(move, spd * dt);
       this.facing = Math.atan2(move.x, move.z);
-      this.visual.setState('run');
+      this.visual.setState(carrying ? 'carry' : 'run');
     } else {
-      this.visual.setState('idle');
+      this.visual.setState(carrying ? 'carry' : 'idle');
     }
 
     // 撿起 / 投擲互動物件
@@ -161,7 +162,8 @@ export class PlayerController {
       if (input.consumePress('j') || input.consumePress('k')) {
         this.props.throwHeld(this.position, this.facing);
         this.visual.setState('throw');
-        this.state = 'attack'; this.stateTime = 0; this.comboStep = 0; this.hitApplied = true;
+        // 借用 attack 狀態做短暫投擲鎖（comboStep=1 → 有效時長；hitApplied 防止誤觸拳擊判定）
+        this.state = 'attack'; this.stateTime = 0; this.comboStep = 1; this.hitApplied = true;
         return;
       }
     } else if (input.consumePress('f')) {

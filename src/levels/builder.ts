@@ -213,6 +213,22 @@ export function buildEnvironment(theme: EnvTheme, length: number): Environment {
       props.push({ x: length * 0.88, kind: 'spire', variant: 0.5 });
       break;
   }
+  // 街邊雜物（不分主題；AI 背景前仍顯示，營造真實環境密度）
+  if (theme !== 'rooftop') {
+    every(5.5, 'scooterRow');
+    every(6, 'hydrant');
+    every(5, 'trash');
+    every(8.5, 'bicycle');
+    every(7, 'cone');
+    every(9, 'plant');
+    every(12, 'vending', true);
+    every(16, 'postbox');
+    if (theme !== 'temple') every(11, 'lamp');
+  } else {
+    every(9, 'vent');
+    every(13, 'crate2');
+    every(16, 'antenna');
+  }
   props.sort((a, b) => a.x - b.x);
 
   // ── 遠景剪影 tile ──
@@ -298,13 +314,15 @@ export function buildEnvironment(theme: EnvTheme, length: number): Environment {
       // 3) 地面（各主題專屬鋪面）
       drawGround(ctx, cam, w, h, theme, spec);
 
-      // 4) 中景道具（z=0 街面後緣）— 僅在無 AI backdrop 時繪製（避免與 AI 場景重疊）
-      if (!aiBg) {
+      // 4) 中景道具：有 AI 背景時只畫街邊雜物（CLUTTER），大建築交給背景圖避免重疊；
+      //    無 AI 背景時全部程式化繪製。
+      {
         const viewMin = cam.x - cam.halfW - 14;
         const viewMax = cam.x + cam.halfW + 14;
         const m = cam.ppm * 0.78;
         for (const p of props) {
           if (p.x < viewMin || p.x > viewMax) continue;
+          if (aiBg && !CLUTTER.has(p.kind)) continue;
           const base = cam.worldToScreen(_gv.set(p.x, 0, 0));
           drawProp(ctx, p, base.x, base.y, m, elapsed, theme);
         }
@@ -605,6 +623,12 @@ function drawGround(ctx: CanvasRenderingContext2D, cam: GameCamera, w: number, h
 const NEON_PALETTE = ['#ff4d6d', '#00d4ff', '#ffd23f', '#9b5bff', '#3ddc97', '#ff8c42'];
 const BILL_PALETTE = ['#c33a4f', '#1f6fae', '#caa432', '#3f7a4f', '#7a4f9e', '#b35a2e'];
 
+// 街邊雜物：AI 背景前仍繪製（營造真實環境密度）
+const CLUTTER = new Set<string>([
+  'scooterRow', 'lamp', 'lantern', 'hydrant', 'trash', 'bicycle', 'cone',
+  'plant', 'vending', 'postbox', 'vent', 'crate2', 'antenna',
+]);
+
 function drawProp(ctx: CanvasRenderingContext2D, p: Prop, bx: number, by: number, m: number, t: number, theme: EnvTheme): void {
   ctx.save();
   ctx.translate(bx, by);
@@ -624,6 +648,15 @@ function drawProp(ctx: CanvasRenderingContext2D, p: Prop, bx: number, by: number
     case 'vent': drawVent(ctx, m); break;
     case 'beacon': drawBeacon(ctx, m, v, t); break;
     case 'spire': drawSpireBase(ctx, m, t); break;
+    case 'hydrant': drawHydrant(ctx, m); break;
+    case 'trash': drawTrash(ctx, m, v); break;
+    case 'bicycle': drawBicycle(ctx, m, v); break;
+    case 'cone': drawCone(ctx, m); break;
+    case 'plant': drawPlant(ctx, m, v); break;
+    case 'vending': drawVending(ctx, m, v, t); break;
+    case 'postbox': drawPostbox(ctx, m); break;
+    case 'crate2': drawSceneCrate(ctx, m, v); break;
+    case 'antenna': drawAntenna(ctx, m, v); break;
   }
   ctx.restore();
 }
@@ -1338,6 +1371,116 @@ function drawBridgeRibs(ctx: CanvasRenderingContext2D, cam: GameCamera, w: numbe
     ctx.moveTo(px, railY - 36);
     ctx.lineTo(px, railY);
     ctx.stroke();
+  }
+}
+
+// ───────── 街邊雜物（厚描邊扁平，The Behemoth 風）─────────
+
+function drawHydrant(ctx: CanvasRenderingContext2D, m: number): void {
+  ctx.lineWidth = 2.4; ctx.strokeStyle = INK; ctx.lineJoin = 'round';
+  ctx.fillStyle = '#cc3a2e';
+  ctx.beginPath(); ctx.roundRect(-m * 0.22, -m * 0.95, m * 0.44, m * 0.95, m * 0.1); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.arc(0, -m * 1.02, m * 0.24, Math.PI, 0); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#a32a20';
+  ctx.beginPath(); ctx.arc(-m * 0.32, -m * 0.6, m * 0.14, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.arc(m * 0.32, -m * 0.6, m * 0.14, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#e0d8c4'; ctx.fillRect(-m * 0.3, 0, m * 0.6, m * 0.05);
+}
+
+function drawTrash(ctx: CanvasRenderingContext2D, m: number, v: number): void {
+  ctx.lineWidth = 2.4; ctx.strokeStyle = INK; ctx.lineJoin = 'round';
+  const c = v > 0.5 ? '#3f6e4a' : '#5a5a5a';
+  ctx.fillStyle = c;
+  ctx.beginPath(); ctx.moveTo(-m * 0.34, -m * 0.9); ctx.lineTo(m * 0.34, -m * 0.9); ctx.lineTo(m * 0.28, 0); ctx.lineTo(-m * 0.28, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = shade(c, 18);
+  ctx.beginPath(); ctx.ellipse(0, -m * 0.92, m * 0.38, m * 0.12, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1.4;
+  ctx.beginPath(); ctx.moveTo(-m * 0.3, -m * 0.55); ctx.lineTo(m * 0.3, -m * 0.55); ctx.stroke();
+  // 露出的垃圾袋
+  ctx.fillStyle = '#d8d2c0'; ctx.beginPath(); ctx.arc(m * 0.1, -m * 0.95, m * 0.12, Math.PI, 0); ctx.fill();
+}
+
+function drawBicycle(ctx: CanvasRenderingContext2D, m: number, v: number): void {
+  ctx.save(); if (v > 0.5) ctx.scale(-1, 1);
+  ctx.lineWidth = m * 0.05; ctx.strokeStyle = INK; ctx.lineCap = 'round';
+  ctx.fillStyle = 'none';
+  for (const wx of [-m * 0.55, m * 0.55]) {
+    ctx.beginPath(); ctx.arc(wx, -m * 0.45, m * 0.45, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.lineWidth = 1.2;
+    for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; ctx.beginPath(); ctx.moveTo(wx, -m * 0.45); ctx.lineTo(wx + Math.cos(a) * m * 0.42, -m * 0.45 + Math.sin(a) * m * 0.42); ctx.stroke(); }
+    ctx.strokeStyle = INK; ctx.lineWidth = m * 0.05;
+  }
+  const c = ['#3f6285', '#7a4a52', '#357a5a'][Math.floor(v * 3) % 3];
+  ctx.strokeStyle = c; ctx.lineWidth = m * 0.08;
+  ctx.beginPath(); ctx.moveTo(-m * 0.55, -m * 0.45); ctx.lineTo(0, -m * 0.45); ctx.lineTo(m * 0.2, -m * 0.95); ctx.lineTo(m * 0.55, -m * 0.45); ctx.moveTo(0, -m * 0.45); ctx.lineTo(-m * 0.2, -m * 0.95); ctx.stroke();
+  ctx.strokeStyle = INK; ctx.lineWidth = m * 0.05;
+  ctx.fillStyle = '#222'; ctx.beginPath(); ctx.ellipse(-m * 0.2, -m * 1.0, m * 0.16, m * 0.07, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(m * 0.2, -m * 1.0); ctx.lineTo(m * 0.34, -m * 1.05); ctx.stroke();
+  ctx.restore();
+}
+
+function drawCone(ctx: CanvasRenderingContext2D, m: number): void {
+  ctx.lineWidth = 2.2; ctx.strokeStyle = INK; ctx.lineJoin = 'round';
+  ctx.fillStyle = '#f06a1e';
+  ctx.beginPath(); ctx.moveTo(0, -m * 0.95); ctx.lineTo(m * 0.3, 0); ctx.lineTo(-m * 0.3, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#f5f0e8';
+  ctx.beginPath(); ctx.moveTo(-m * 0.16, -m * 0.5); ctx.lineTo(m * 0.16, -m * 0.5); ctx.lineTo(m * 0.2, -m * 0.36); ctx.lineTo(-m * 0.2, -m * 0.36); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#f06a1e'; ctx.fillRect(-m * 0.42, -m * 0.06, m * 0.84, m * 0.1); ctx.strokeRect(-m * 0.42, -m * 0.06, m * 0.84, m * 0.1);
+}
+
+function drawPlant(ctx: CanvasRenderingContext2D, m: number, v: number): void {
+  ctx.lineWidth = 2.4; ctx.strokeStyle = INK; ctx.lineJoin = 'round';
+  ctx.fillStyle = '#9c5a32';
+  ctx.beginPath(); ctx.moveTo(-m * 0.3, -m * 0.5); ctx.lineTo(m * 0.3, -m * 0.5); ctx.lineTo(m * 0.24, 0); ctx.lineTo(-m * 0.24, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = v > 0.5 ? '#3f8a4a' : '#4a9a55';
+  for (let i = 0; i < 6; i++) {
+    const a = -Math.PI / 2 + (i - 2.5) * 0.4;
+    ctx.beginPath(); ctx.ellipse(Math.cos(a) * m * 0.3, -m * 0.5 + Math.sin(a) * m * 0.55 - m * 0.1, m * 0.13, m * 0.4, a + Math.PI / 2, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  }
+}
+
+function drawVending(ctx: CanvasRenderingContext2D, m: number, v: number, t: number): void {
+  ctx.lineWidth = 2.6; ctx.strokeStyle = INK; ctx.lineJoin = 'round';
+  const c = v > 0.5 ? '#c0392b' : '#1f6fae';
+  handRect(ctx, -m * 0.7, -m * 2.4, m * 1.4, m * 2.4, c, { shadeH: m * 0.3 });
+  // 玻璃展示窗（飲料排）
+  ctx.fillStyle = '#10202c'; ctx.fillRect(-m * 0.5, -m * 2.2, m * 0.7, m * 1.5); ctx.strokeRect(-m * 0.5, -m * 2.2, m * 0.7, m * 1.5);
+  for (let r = 0; r < 4; r++) for (let cc = 0; cc < 3; cc++) {
+    ctx.fillStyle = ['#e8d44a', '#e85a4a', '#4ae87a', '#4a9ae8'][(r + cc) % 4];
+    ctx.fillRect(-m * 0.46 + cc * m * 0.22, -m * 2.15 + r * m * 0.36, m * 0.16, m * 0.28);
+  }
+  // 取貨口 + 按鈕燈
+  ctx.fillStyle = '#0c0c0c'; ctx.fillRect(-m * 0.5, -m * 0.55, m * 0.7, m * 0.4); ctx.strokeRect(-m * 0.5, -m * 0.55, m * 0.7, m * 0.4);
+  ctx.fillStyle = `rgba(255,220,120,${0.5 + 0.5 * Math.sin(t * 3 + v * 9)})`;
+  ctx.fillRect(m * 0.3, -m * 2.0, m * 0.28, m * 1.4);
+}
+
+function drawPostbox(ctx: CanvasRenderingContext2D, m: number): void {
+  ctx.lineWidth = 2.4; ctx.strokeStyle = INK; ctx.lineJoin = 'round';
+  // 台灣紅綠雙筒郵筒
+  for (let i = 0; i < 2; i++) {
+    const x = (i - 0.5) * m * 0.5;
+    ctx.fillStyle = i === 0 ? '#1f9a4a' : '#cc3a2e';
+    ctx.beginPath(); ctx.roundRect(x - m * 0.22, -m * 1.5, m * 0.44, m * 1.5, [m * 0.2, m * 0.2, 0, 0]); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#1a1a1a'; ctx.fillRect(x - m * 0.14, -m * 1.32, m * 0.28, m * 0.07);
+  }
+  ctx.fillStyle = '#888'; ctx.fillRect(-m * 0.5, 0, m, m * 0.06);
+}
+
+function drawSceneCrate(ctx: CanvasRenderingContext2D, m: number, v: number): void {
+  ctx.lineWidth = 2.4; ctx.strokeStyle = INK;
+  ctx.fillStyle = v > 0.5 ? '#5a5f66' : '#6a5226';
+  ctx.fillRect(-m * 0.5, -m, m, m); ctx.strokeRect(-m * 0.5, -m, m, m);
+  ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 1.4;
+  ctx.beginPath(); ctx.moveTo(-m * 0.5, -m); ctx.lineTo(m * 0.5, 0); ctx.moveTo(m * 0.5, -m); ctx.lineTo(-m * 0.5, 0); ctx.stroke();
+}
+
+function drawAntenna(ctx: CanvasRenderingContext2D, m: number, v: number): void {
+  ctx.lineWidth = m * 0.04; ctx.strokeStyle = INK; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(v * m * 0.3 - m * 0.15, -m * 2.4); ctx.stroke();
+  for (let i = 1; i <= 4; i++) {
+    const y = -m * (0.5 + i * 0.45); const w = m * (0.5 - i * 0.08);
+    ctx.beginPath(); ctx.moveTo(-w / 2 + v * m * 0.1, y); ctx.lineTo(w / 2 + v * m * 0.1, y); ctx.stroke();
   }
 }
 

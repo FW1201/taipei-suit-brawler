@@ -7,7 +7,7 @@ import { getClip, type SpriteClip } from '../core/sprites';
 export type VisualState =
   | 'idle' | 'walk' | 'run'
   | 'punch1' | 'punch2' | 'punch3' | 'heavy'
-  | 'dodge' | 'hit' | 'down' | 'block' | 'throw' | 'rage';
+  | 'dodge' | 'hit' | 'down' | 'block' | 'throw' | 'rage' | 'carry';
 
 export interface CharacterVisualOptions {
   suitColor: number;
@@ -172,9 +172,9 @@ export class CharacterVisual implements ICharacterVisual {
     const map: Record<VisualState, string> = {
       idle: 'idle',
       walk: 'run', run: 'run', dodge: 'run',
-      punch1: 'punch1', punch2: 'punch1', throw: 'punch1',
+      punch1: 'punch1', punch2: 'punch1', throw: 'throw',
       punch3: 'heavy', heavy: 'heavy', rage: 'heavy',
-      hit: 'idle', down: 'idle', block: 'idle',
+      hit: 'idle', down: 'idle', block: 'idle', carry: 'carry',
     };
     return map[this.state] ?? 'idle';
   }
@@ -191,6 +191,10 @@ export class CharacterVisual implements ICharacterVisual {
     ctx.save();
     ctx.translate(sx, groundY);
     ctx.scale(this.flip, 1);
+    // 受擊/倒地/翻滾：以變形重用 sprite，免額外素材
+    if (this.state === 'down') { ctx.translate(drawH * 0.18, -drawH * 0.06); ctx.rotate(1.42); }
+    else if (this.state === 'hit') ctx.rotate(-0.2);
+    else if (this.state === 'dodge') ctx.rotate(this.stateTime * 9 % (Math.PI * 2));
     ctx.drawImage(clip.image, fx, fy, clip.frameW, clip.frameH, -drawW * clip.anchorX, -drawH * clip.anchorY, drawW, drawH);
     ctx.restore();
   }

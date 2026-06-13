@@ -10,17 +10,37 @@ import type { PropKind } from '../types';
 const INK = '#181410';
 const GRAV = 22;
 
-interface PropImage { img: HTMLImageElement; ready: boolean; }
+interface PropImage { img: HTMLImageElement | HTMLCanvasElement; ready: boolean; w: number; h: number; }
 const propImgs = new Map<PropKind, PropImage>();
+
+/** 綠幕去背：AI 圖以純綠 (#00ff00) 背景生成，載入後把綠色像素轉透明 */
+function chromaKey(img: HTMLImageElement): HTMLCanvasElement {
+  const c = document.createElement('canvas');
+  c.width = img.width; c.height = img.height;
+  const ctx = c.getContext('2d')!;
+  ctx.drawImage(img, 0, 0);
+  try {
+    const d = ctx.getImageData(0, 0, c.width, c.height);
+    const a = d.data;
+    for (let i = 0; i < a.length; i += 4) {
+      const r = a[i], g = a[i + 1], b = a[i + 2];
+      if (g > 130 && r < 140 && b < 140 && g - r > 40 && g - b > 40) a[i + 3] = 0;
+    }
+    ctx.putImageData(d, 0, 0);
+  } catch { /* 跨域時無法讀像素，直接用原圖 */ }
+  return c;
+}
+
 function loadPropImg(kind: PropKind): PropImage {
   let p = propImgs.get(kind);
   if (!p) {
     const img = new Image();
-    p = { img, ready: false };
-    img.onload = () => { p!.ready = true; };
-    img.onerror = () => { p!.ready = false; };
+    const slot: PropImage = { img, ready: false, w: 1, h: 1 };
+    img.onload = () => { slot.img = chromaKey(img); slot.w = img.width; slot.h = img.height; slot.ready = true; };
+    img.onerror = () => { slot.ready = false; };
     img.src = `/assets/props/${kind}.png`;
-    propImgs.set(kind, p);
+    propImgs.set(kind, slot);
+    p = slot;
   }
   return p;
 }
@@ -59,7 +79,7 @@ export class ObjectManager {
     this.objs.push({
       kind, pos: pos.clone(), vel: new Vec3(), state: 'rest',
       hp: kind === 'barrier' ? 9999 : kind === 'crate' ? 30 : 1,
-      spin: 0, radius: kind === 'football' ? 0.32 : kind === 'mower' ? 0.7 : kind === 'barrier' ? 1.1 : 0.55,
+      spin: 0, radius: kind === 'football' ? 0.44 : kind === 'mower' ? 0.7 : kind === 'barrier' ? 1.1 : 0.55,
       life: 0, hitSet: new Set(), solid,
     });
   }
@@ -259,12 +279,12 @@ export class ObjectManager {
     }
     const img = loadPropImg(o.kind);
     if (img.ready) {
-      const h = o.radius * 2.4 * k;
-      const w = h * (img.img.width / img.img.height);
+      const h = o.radius * 2.6 * k;
+      const w = h * (img.w / img.h);
       ctx.save();
       ctx.translate(s.x, s.y);
-      if (o.kind === 'football' || o.kind === 'explosive') ctx.rotate(o.spin);
-      ctx.drawImage(img.img, -w / 2, -h * 0.82, w, h);
+      if (o.kind === 'football') ctx.rotate(o.spin);
+      ctx.drawImage(img.img, -w / 2, -h * 0.86, w, h);
       ctx.restore();
       return;
     }

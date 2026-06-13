@@ -10,6 +10,7 @@ const CONTROLS: Array<[string, string]> = [
   ['Space', '閃避'],
   ['L', '必殺'],
   ['E', '喝珍奶'],
+  ['F', '撿起 / 投擲'],
 ];
 
 export function createTitle(): TitleAPI {
