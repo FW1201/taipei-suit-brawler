@@ -22,7 +22,12 @@ export class EnemyManager implements HitQuery, EnemyHost {
   private tokens = new Set<Enemy>();
   private bottles: Bottle[] = [];
 
+  private coverBlocker: ((p: Vec3) => boolean) | null = null;
+
   constructor(private player: PlayerTarget) {}
+
+  /** 設定掩體攔截器（飛行投擲物經過實心掩體會被擋下） */
+  setCoverBlocker(fn: (p: Vec3) => boolean): void { this.coverBlocker = fn; }
 
   spawn(def: EnemyDef, pos: Vec3): Enemy {
     const e = new Enemy(def, pos, this.player, this);
@@ -96,6 +101,11 @@ export class EnemyManager implements HitQuery, EnemyHost {
       const b = this.bottles[i];
       b.t += dt / 0.9; // 飛行 0.9 秒
       b.spin += dt * 12;
+      // 飛行途中被掩體擋下
+      if (this.coverBlocker && this.coverBlocker(b.pos)) {
+        this.bottles.splice(i, 1);
+        continue;
+      }
       if (b.t >= 1) {
         // 落地：命中判定
         if (this.player.isAlive && this.player.position.distanceTo(b.to) < 1.3) {

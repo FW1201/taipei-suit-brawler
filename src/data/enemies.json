@@ -36,7 +36,8 @@
     "attackCooldown": 2.2,
     "money": 110,
     "scale": 1.35,
-    "tint": "#B8915A"
+    "tint": "#B8915A",
+    "armor": 25
   },
   {
     "id": "thrower",
@@ -64,7 +65,8 @@
     "money": 100,
     "scale": 1.1,
     "tint": "#14171C",
-    "blockChance": 0.5
+    "blockChance": 0.5,
+    "armor": 40
   },
   {
     "id": "berserker",
@@ -120,7 +122,8 @@
     "money": 1100,
     "scale": 1.5,
     "tint": "#8C6A3F",
-    "phases": 2
+    "phases": 2,
+    "armor": 60
   },
   {
     "id": "boss_xinyi",
@@ -134,7 +137,9 @@
     "money": 1500,
     "scale": 1.2,
     "tint": "#2C2F4A",
-    "phases": 2
+    "phases": 2,
+    "armor": 50,
+    "rangedEvery": 3.2
   },
   {
     "id": "boss_101",
@@ -148,6 +153,8 @@
     "money": 2000,
     "scale": 1.3,
     "tint": "#6E1FB8",
-    "phases": 3
+    "phases": 3,
+    "armor": 80,
+    "rangedEvery": 2.6
   }
 ]

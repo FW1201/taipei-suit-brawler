@@ -3,7 +3,7 @@
 import { Vec3, lerp } from './vec';
 
 export const DEPTH = 6;          // 街道縱深（公尺）
-const VIEW_METERS_V = 9.5;       // 螢幕垂直涵蓋的世界公尺數（決定 ppm）
+const VIEW_METERS_V = 7.0;       // 螢幕垂直涵蓋的世界公尺數（越小越放大；7.0 = 角色更大、操作更清楚）
 
 export interface ScreenPos {
   x: number;

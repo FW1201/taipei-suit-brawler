@@ -7,6 +7,7 @@ import { buildEnvironment, type Environment } from './builder';
 import { PlayerController, type PlayerDelegate } from '../combat/player';
 import { EnemyManager } from '../enemies/manager';
 import type { PlayerTarget } from '../enemies/enemy';
+import { ObjectManager } from '../world/objects';
 import { QuestTracker } from '../systems/quest';
 import { CombatFX } from '../combat/fx';
 import { bus } from '../core/events';
@@ -27,6 +28,7 @@ export class LevelRunner {
   private cam = new GameCamera();
   private player: PlayerController;
   private enemies: EnemyManager;
+  private objects: ObjectManager;
   private tracker: QuestTracker;
   private fx = new CombatFX();
 
@@ -73,8 +75,11 @@ export class LevelRunner {
       takeDamage: (amount, fromPos) => playerInstance.takeDamage(amount, fromPos),
     };
     this.enemies = new EnemyManager(playerTarget);
+    this.objects = new ObjectManager(this.enemies);
+    this.enemies.setCoverBlocker((p) => this.objects.blocksProjectile(p));
     playerInstance = new PlayerController(stats, this.enemies, delegate, this.bounds);
     this.player = playerInstance;
+    this.player.setProps(this.objects);
     this.player.resetForLevel(new Vec3(3, 0, DEPTH * 0.55));
 
     // GO 推進箭頭
@@ -143,6 +148,15 @@ export class LevelRunner {
     bus.emit('wave:started', { index: idx + 1, total: this.level.waves.length });
     if (this.level.waves.length > 1) {
       this.hud.announce(`第 ${idx + 1} / ${this.level.waves.length} 波`, 1500);
+    }
+    // 互動物件：在鎖屏區內散佈（爆炸物/足球/除草機/掩體）
+    if (wave.props?.length) {
+      const c = this.boundsCenter();
+      wave.props.forEach((kind, i) => {
+        const x = c + (i - (wave.props!.length - 1) / 2) * 2.6 + (Math.random() - 0.5);
+        const z = 0.8 + Math.random() * (DEPTH - 1.6);
+        this.objects.spawn(kind, new Vec3(x, 0, z));
+      });
     }
     // 從鎖屏視野左右兩側進場
     let side = 1;
@@ -221,6 +235,11 @@ export class LevelRunner {
     this.env.update(dt, elapsed);
     this.player.update(dt);
     this.enemies.update(dt);
+    this.objects.update(dt);
+    // 敵人被掩體推開
+    for (const e of this.enemies.all) {
+      if (e.isAlive()) this.objects.resolveCover(e.position, e.def.scale * 0.4);
+    }
     this.tracker.update(dt);
     this.cam.update(this.player.position.x, dt);
     this.fx.updateEnemyBars(this.enemies.all, this.cam);
@@ -272,12 +291,16 @@ export class LevelRunner {
     this.cam.viewport(w, h);
     this.env.drawBackground(ctx, this.cam, w, h, this.elapsed);
 
+    // 地面互動物件（掩體/靜置物件）先依縱深畫，與角色共用 y-sort 視覺
+    this.objects.draw(ctx, this.cam);
+
     // 實體層：依縱深 y-sort（z 小 = 遠 = 先畫）
     const visuals = [this.player.visual, ...this.enemies.all.map((e) => e.visual)]
       .filter((v) => !v.disposed)
       .sort((a, b) => a.root.position.z - b.root.position.z);
     for (const v of visuals) v.draw(ctx, this.cam);
 
+    this.objects.drawHeld(ctx, this.cam);
     this.enemies.drawProjectiles(ctx, this.cam);
     this.env.drawForeground(ctx, this.cam, w, h, this.elapsed);
   }

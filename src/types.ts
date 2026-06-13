@@ -37,6 +37,8 @@ export interface EnemyDef {
   projectile?: boolean;  // 投擲手
   enrageBelow?: number;  // 狂徒：HP 比例低於此值狂暴
   phases?: number;       // Boss 階段數
+  armor?: number;        // 裝甲值：未破甲前傷害減半，需重擊/終結技削減；0/undefined = 無甲
+  rangedEvery?: number;  // 遠程攻擊間隔（秒）：有值的敵人會定期投擲（含 boss 遠端模式）
 }
 
 // ───────────────────────── 技能 ─────────────────────────
@@ -120,11 +122,15 @@ export interface QuestProgress {
 
 // ───────────────────────── 關卡 ─────────────────────────
 
+export type PropKind = 'explosive' | 'football' | 'mower' | 'crate' | 'barrier';
+
 export interface EnemyWave {
   /** 該波出怪：enemyDefId → 數量 */
   spawns: Record<string, number>;
   /** 觸發：前一波清完(clear) 或 進入區域(zone index) */
   trigger: 'clear' | number;
+  /** 該鎖屏區出現的互動物件（可投擲爆炸物/足球/除草機/掩體） */
+  props?: PropKind[];
 }
 
 export interface LevelDef {

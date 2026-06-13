@@ -43,6 +43,8 @@ export class Enemy implements Hittable {
   private enraged = false;
   private blockedRecently = 0; // 連續被打中數，用於破格擋判斷
   private fadeTimer = -1;
+  armorLeft = 0;               // 裝甲剩餘值（>0 時減傷且不硬直）
+  private rangedTimer = 0;     // 遠程攻擊計時
   /** Boss 階段（1 起算）；非 Boss 恆為 1 */
   phase = 1;
 
@@ -54,6 +56,8 @@ export class Enemy implements Hittable {
   ) {
     this.def = def;
     this.hp = this.maxHp = def.hp;
+    this.armorLeft = def.armor ?? 0;
+    this.rangedTimer = def.rangedEvery ? def.rangedEvery * (0.5 + Math.random()) : 0;
     this.position.copy(spawnPos);
     this.visual = createCharacterVisual({
       suitColor: parseInt(def.tint.replace('#', ''), 16),
@@ -105,6 +109,16 @@ export class Enemy implements Hittable {
       this.toState('idle');
       this.visual.setState('idle');
     } else {
+      // 遠程模式：非投擲主業的敵人/頭目，定期遠端丟擲（保持壓制）
+      if (this.def.rangedEvery && !this.def.projectile && this.state !== 'windup' && this.state !== 'attack') {
+        this.rangedTimer -= dt;
+        const dist = this.player.position.clone().sub(this.position).length();
+        if (this.rangedTimer <= 0 && dist > 3 && dist < 12) {
+          this.rangedTimer = this.def.rangedEvery;
+          this.host.spawnProjectile(this.position.clone().setY(1.6), this.player.position.clone(), this.def.damage * 0.8);
+          this.visual.setState('throw');
+        }
+      }
       this.think(dt);
     }
 
@@ -242,8 +256,19 @@ export class Enemy implements Hittable {
     }
     this.blockedRecently = 0;
 
+    // 裝甲：未破甲前傷害減半、不硬直；重擊/終結技削甲，削穿才會破防
+    let armored = false;
+    if (this.armorLeft > 0) {
+      armored = true;
+      const chip = opts.breaksBlock ? damage : damage * 0.4; // 重擊削甲快
+      this.armorLeft = Math.max(0, this.armorLeft - chip);
+      damage *= 0.5;
+      this.visual.flashTint(0x88ccff); // 金屬藍閃
+      if (this.armorLeft <= 0) { playSound('heavyHit'); this.visual.setRageGlow(false); }
+    }
+
     this.hp -= Math.round(damage);
-    this.visual.flashTint(opts.isCrit ? 0xffdd00 : 0xffffff);
+    if (!armored) this.visual.flashTint(opts.isCrit ? 0xffdd00 : 0xffffff);
     bus.emit('enemy:damaged', { defId: this.def.id, hp: Math.max(0, this.hp), maxHp: this.maxHp });
     bus.emit('fx:damage', {
       x: this.position.x,
@@ -272,8 +297,8 @@ export class Enemy implements Hittable {
       }
     }
 
-    // 硬直：壯漢/Boss 對輕攻擊有霸體
-    const superArmor = this.def.kind === 'bruiser' || this.def.kind === 'boss';
+    // 硬直：壯漢/Boss 對輕攻擊有霸體；有甲時完全不硬直（除非破甲擊）
+    const superArmor = this.def.kind === 'bruiser' || this.def.kind === 'boss' || armored;
     if (opts.knockdown && !(superArmor && !opts.breaksBlock)) {
       this.toState('knocked');
       this.visual.setState('down');

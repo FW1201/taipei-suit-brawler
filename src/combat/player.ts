@@ -1,6 +1,7 @@
 import { Vec3 } from '../core/vec';
 import { createCharacterVisual, type ICharacterVisual } from './visual';
 import type { HitQuery } from './damage';
+import type { ObjectManager } from '../world/objects';
 import type { PlayerStats } from '../types';
 import { bus } from '../core/events';
 import { input } from '../core/input';
@@ -42,6 +43,9 @@ export class PlayerController {
   private dodgeDir = new Vec3();
   private elapsed = 0;
   private downTimer = 0;
+  private props: ObjectManager | null = null;
+
+  setProps(p: ObjectManager): void { this.props = p; }
 
   constructor(
     public stats: PlayerStats,
@@ -115,6 +119,7 @@ export class PlayerController {
     }
 
     this.clampToBounds();
+    this.props?.followCarrier(this.position, this.facing, dt);
     this.visual.root.position.x = this.position.x;
     this.visual.root.position.z = this.position.z;
     // visual.update 控制 position.y（跳/翻滾），所以 y 由 visual 管
@@ -140,13 +145,28 @@ export class PlayerController {
   private updateFree(dt: number): void {
     const move = this.readMoveInput();
     const moving = move.lengthSq() > 0;
+    const riding = this.props?.isRiding() ?? false;
 
     if (moving) {
-      this.position.addScaledVector(move, this.stats.moveSpeed * dt);
+      const spd = this.stats.moveSpeed * (riding ? 1.7 : 1);
+      this.position.addScaledVector(move, spd * dt);
       this.facing = Math.atan2(move.x, move.z);
       this.visual.setState('run');
     } else {
       this.visual.setState('idle');
+    }
+
+    // 撿起 / 投擲互動物件
+    if (this.props?.hasHeld()) {
+      if (input.consumePress('j') || input.consumePress('k')) {
+        this.props.throwHeld(this.position, this.facing);
+        this.visual.setState('throw');
+        this.state = 'attack'; this.stateTime = 0; this.comboStep = 0; this.hitApplied = true;
+        return;
+      }
+    } else if (input.consumePress('f')) {
+      this.props?.tryPickup(this.position, this.facing);
+      return;
     }
 
     if (input.consumePress('j')) { this.startLight(); return; }
@@ -359,6 +379,7 @@ export class PlayerController {
   }
 
   private clampToBounds(): void {
+    this.props?.resolveCover(this.position, 0.4);
     this.position.x = Math.max(this.bounds.minX, Math.min(this.bounds.maxX, this.position.x));
     this.position.z = Math.max(this.bounds.minZ, Math.min(this.bounds.maxZ, this.position.z));
   }

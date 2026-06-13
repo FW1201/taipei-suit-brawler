@@ -11,19 +11,30 @@
         "spawns": {
           "punk": 4
         },
-        "trigger": 0
+        "trigger": 0,
+        "props": [
+          "crate"
+        ]
       },
       {
         "spawns": {
           "punk": 5
         },
-        "trigger": "clear"
+        "trigger": "clear",
+        "props": [
+          "football",
+          "crate"
+        ]
       },
       {
         "spawns": {
           "punk": 6
         },
-        "trigger": "clear"
+        "trigger": "clear",
+        "props": [
+          "explosive",
+          "barrier"
+        ]
       }
     ],
     "length": 55
@@ -41,28 +52,42 @@
           "punk": 4,
           "knifer": 2
         },
-        "trigger": 0
+        "trigger": 0,
+        "props": [
+          "crate",
+          "football"
+        ]
       },
       {
         "spawns": {
           "punk": 5,
           "knifer": 3
         },
-        "trigger": 1
+        "trigger": 1,
+        "props": [
+          "explosive"
+        ]
       },
       {
         "spawns": {
           "punk": 4,
           "knifer": 4
         },
-        "trigger": 2
+        "trigger": 2,
+        "props": [
+          "barrier",
+          "explosive"
+        ]
       },
       {
         "spawns": {
           "punk": 2,
           "knifer": 2
         },
-        "trigger": "clear"
+        "trigger": "clear",
+        "props": [
+          "football"
+        ]
       }
     ],
     "length": 65
@@ -80,7 +105,11 @@
           "punk": 5,
           "knifer": 2
         },
-        "trigger": 0
+        "trigger": 0,
+        "props": [
+          "barrier",
+          "crate"
+        ]
       },
       {
         "spawns": {
@@ -88,7 +117,11 @@
           "bruiser": 1,
           "knifer": 2
         },
-        "trigger": "clear"
+        "trigger": "clear",
+        "props": [
+          "explosive",
+          "mower"
+        ]
       },
       {
         "spawns": {
@@ -96,7 +129,11 @@
           "knifer": 3,
           "berserker": 1
         },
-        "trigger": "clear"
+        "trigger": "clear",
+        "props": [
+          "explosive",
+          "barrier"
+        ]
       }
     ],
     "length": 60
@@ -114,7 +151,11 @@
           "bodyguard": 3,
           "punk": 3
         },
-        "trigger": 0
+        "trigger": 0,
+        "props": [
+          "barrier",
+          "crate"
+        ]
       },
       {
         "spawns": {
@@ -122,7 +163,11 @@
           "thrower": 2,
           "knifer": 2
         },
-        "trigger": 1
+        "trigger": 1,
+        "props": [
+          "explosive",
+          "football"
+        ]
       },
       {
         "spawns": {
@@ -130,7 +175,11 @@
           "thrower": 1,
           "bruiser": 1
         },
-        "trigger": "clear"
+        "trigger": "clear",
+        "props": [
+          "barrier",
+          "explosive"
+        ]
       },
       {
         "spawns": {
@@ -138,7 +187,11 @@
           "knifer": 3,
           "berserker": 1
         },
-        "trigger": "clear"
+        "trigger": "clear",
+        "props": [
+          "mower",
+          "explosive"
+        ]
       }
     ],
     "length": 70
@@ -157,7 +210,11 @@
           "knifer": 2,
           "bruiser": 1
         },
-        "trigger": 0
+        "trigger": 0,
+        "props": [
+          "barrier",
+          "explosive"
+        ]
       },
       {
         "spawns": {
@@ -165,7 +222,11 @@
           "knifer": 2,
           "thrower": 2
         },
-        "trigger": "clear"
+        "trigger": "clear",
+        "props": [
+          "crate",
+          "football"
+        ]
       },
       {
         "spawns": {
@@ -173,7 +234,12 @@
           "bruiser": 2,
           "berserker": 2
         },
-        "trigger": "clear"
+        "trigger": "clear",
+        "props": [
+          "explosive",
+          "barrier",
+          "mower"
+        ]
       },
       {
         "spawns": {
@@ -182,7 +248,11 @@
           "thrower": 2,
           "bodyguard": 2
         },
-        "trigger": "clear"
+        "trigger": "clear",
+        "props": [
+          "explosive",
+          "explosive"
+        ]
       }
     ],
     "length": 75
